@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 
 export default function Register() {
+
     const [name, setName] = useState('');
     const [nameError, setNameError] = useState('');
 
@@ -91,10 +93,18 @@ export default function Register() {
     const handlePasswordChange = (e) => {
         const value = e.target.value;
         setPassword(value);
+      
+        const isPasswordValid = /^(?=.*[A-Z])(?=.*\d).{8,}$/.test(value);
+      
         if (value.trim() === '') {
-            setPasswordError('Password must not be empty.');
-        } else setPasswordError('');
-    };
+          setPasswordError('Password must not be empty.');
+        } else if (!isPasswordValid) {
+          setPasswordError('Password must be at least 8 characters long, including one uppercase letter and one number.');
+        } else {
+          setPasswordError('');
+        }
+      };
+      
 
     const handleConfirmPasswordChange = (e) => {
         const value = e.target.value;
@@ -243,7 +253,9 @@ export default function Register() {
                     </div>
 
                     <div className='text-center'>
-                        <label className="text-red-600">Have an Account?</label> <a className='text-cyan-400 underline' href='/Login'>Login here</a>
+                        <label className="text-red-600">Have an Account?</label>  <a href="#" className='text-cyan-400 underline'>
+                            <Link to="/">Login</Link>
+                        </a>
                     </div>
 
                 </form>
