@@ -1,19 +1,21 @@
 from marshmallow import Schema, post_load, fields
 
+
 class User:
-    def __init__(self,name,lastName,address,city,country,phoneNum,email,pw):
-        self._name = name
-        self._lastName = lastName
-        self._address = address
-        self._city = city
-        self._country = country
-        self._phoneNum = phoneNum
-        self._email = email
-        self._password = pw
-        self._id = None
+    def __init__(self, name, lastName, address, city, country, phoneNum, email, password):
+        self.name = name
+        self.lastName = lastName
+        self.address = address
+        self.city = city
+        self.country = country
+        self.phoneNum = phoneNum
+        self.email = email
+        self.password = password
+        self.id = None
+
 
 class UserSchema(Schema):
-    name  = fields.Str(required=True)
+    name = fields.Str(required=True)
     lastName = fields.Str(required=True)
     address = fields.Str(required=True)
     city = fields.Str(required=True)
@@ -23,19 +25,21 @@ class UserSchema(Schema):
     password = fields.Str(required=True, load_only=True)
     id = fields.Int(dump_only=True)
 
+    @post_load
+    def create_user(self, data, **kwargs):
+        return User(**data)
 
-"""
-class KorisnikSchema(Schema):
-    email = fields.Str()
-    adresa = fields.Str()
-    brtelefona = fields.Str()
-    drzava = fields.Str()
-    grad = fields.Str()
-    ime = fields.Str()
-    lozinka = fields.Str()
-    prezime = fields.Str()
+
+class UserLogin:
+    def __init__(self, email, password):
+        self.email = email
+        self.password = password
+
+
+class UserLoginSchema(Schema):
+    email = fields.Str(required=True)
+    password = fields.Str(required=True)
 
     @post_load
-    def createUser(self, data, **kwargs):
-        return Korisnik(**data)
-"""
+    def create_user_login(self, data, **kwargs):
+        return UserLogin(**data)

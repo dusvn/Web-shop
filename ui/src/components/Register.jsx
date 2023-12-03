@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import {API_BASE_URL} from "../index";
 
 export default function Register() {
 
@@ -114,6 +115,32 @@ export default function Register() {
         } else if (value !== password) {
             setConfirmPasswordError('Passwords do not match.');
         } else setConfirmPasswordError('');
+    };
+
+    const handleRegistration = async () => {
+        const userData = {
+            "name" : name,
+            "lastName" :lastName,
+            "address": address,
+            "city": city,
+            "country": country,
+            "phoneNum":phoneNum,
+            "email":email,
+            "password":password
+        };
+        try {
+            const response = await fetch(`${API_BASE_URL}/register`, {
+                method: 'POST',
+                body: JSON.stringify(userData),
+            });
+            if (response.ok) {
+                console.log('Registration successful');
+            } else {
+                console.error('Registration failed');
+            }
+        } catch (error) {
+            console.error('Error during registration', error);
+        }
     };
 
     return (
@@ -249,7 +276,9 @@ export default function Register() {
                     </div>
 
                     <div>
-                        <button className='w-full my-5 py-2 bg-teal-500 shadow-lg shadow-teal-500/40 hover:shadow-teal-500/40 text-white font-semibold rounded-lg'>Register</button>
+                        <button
+                            onClick={handleRegistration}
+                            className='w-full my-5 py-2 bg-teal-500 shadow-lg shadow-teal-500/40 hover:shadow-teal-500/40 text-white font-semibold rounded-lg'>Register</button>
                     </div>
 
                     <div className='text-center'>
