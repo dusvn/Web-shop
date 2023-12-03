@@ -15,7 +15,7 @@ from google.cloud.firestore_v1.base_query import FieldFilter  # nije potrebno al
 
 
 app = Flask(__name__)
-CORS(app, origins=["http://localhost:3000"], methods=["GET", "POST", "PUT"])
+CORS(app, origins="*", methods=["GET", "POST", "PUT"])
 
 app.config["JWT_SECRET_KEY"] = "tajniKljuc"  # f"{secrets.SystemRandom().getrandbits(128)}"  # svaki put kad se resetuje app imacemo drugi
 jwt = JWTManager(app)
@@ -28,7 +28,7 @@ def register_user():  # ovaj metod view je da ako nam treba npr vise operacija t
     if is_email_taken(new_user.email):
         return jsonify({"error": "Email is already taken"}), 400
     new_user.password = hash_pass(new_user.password)
-    db.collection("Users").add(new_user.__dict__)
+    db.collection("Users").add(new_user.__dict__)  # ovo vraca nesto, probaj odatle da izvuces id i da ga zapises u bazu
     return jsonify({"message": "User registered successfully"}), 201
 
 

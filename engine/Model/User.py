@@ -11,7 +11,6 @@ class User:
         self.phoneNum = phoneNum
         self.email = email
         self.password = password
-        self.id = None
 
 
 class UserSchema(Schema):
@@ -23,7 +22,6 @@ class UserSchema(Schema):
     phoneNum = fields.Str(required=True)
     email = fields.Str(required=True)
     password = fields.Str(required=True, load_only=True)
-    id = fields.Int(dump_only=True)
 
     @post_load
     def create_user(self, data, **kwargs):
