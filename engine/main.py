@@ -1,4 +1,4 @@
-from functools import wraps
+# from functools import wraps
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -43,7 +43,7 @@ def login_user():
         users = user_ref.stream()
         for user in users:
             user_data = user.to_dict()
-            if user_data["password"] == hash_pass(new_user.password):
+            if user_data['password'] == new_user.password:
                 access_token = create_access_token(identity=user.id)
                 return jsonify({"access_token": access_token}), 200
             break
