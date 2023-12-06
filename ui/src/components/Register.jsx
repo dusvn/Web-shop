@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import {useNavigate} from "react-router-dom";
+import {API_BASE_URL} from "../index";
 
 export default function Register() {
+
+    const navigate = useNavigate();
 
     const [name, setName] = useState('');
     const [nameError, setNameError] = useState('');
@@ -116,10 +120,45 @@ export default function Register() {
         } else setConfirmPasswordError('');
     };
 
+    const handleRegistration = async (e) => {
+        e.preventDefault();
+        const userData = {
+            "name" : name,
+            "lastName" :lastName,
+            "address": address,
+            "city": city,
+            "country": country,
+            "phoneNum":phoneNum,
+            "email":email,
+            "password":password
+        };
+        try {
+            console.warn(userData)
+            const response = await fetch(`${API_BASE_URL}/register`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json;charset=UTF-8',
+                },
+                body: JSON.stringify(userData)
+            });
+            console.warn(response);
+            if (response.status === 201) {
+                console.log('Registration successful');
+                navigate("/");
+            } else {
+                console.error('Registration failed');
+            }
+        } catch (error) {
+            console.warn(error);
+            console.error('Error during registration', error);
+        }
+    };
+
     return (
         <div className='grid grid-cols-1 sm:grid-cols-1 h-screen w-full'>
             <div className='bg-gray-800 flex flex-col justify-center'>
-                <form className='max-w-[600px] w-full mx-auto bg-gray-900 p-8 px-8 rounded-lg h-auto'>
+                <form className='max-w-[600px] w-full mx-auto bg-gray-900 p-8 px-8 rounded-lg h-auto'
+                onSubmit={handleRegistration}>
                     <h2 className='text-4xl dark:text-white text-center italic font-light'>REGISTER</h2>
 
                     <div className='flex flex-col text-gray-400 py-2'>
@@ -249,7 +288,9 @@ export default function Register() {
                     </div>
 
                     <div>
-                        <button className='w-full my-5 py-2 bg-teal-500 shadow-lg shadow-teal-500/40 hover:shadow-teal-500/40 text-white font-semibold rounded-lg'>Register</button>
+                        <button type="submit"
+
+                            className='w-full my-5 py-2 bg-teal-500 shadow-lg shadow-teal-500/40 hover:shadow-teal-500/40 text-white font-semibold rounded-lg'>Register</button>
                     </div>
 
                     <div className='text-center'>
