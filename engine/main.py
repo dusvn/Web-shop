@@ -1,5 +1,4 @@
 # from functools import wraps
-
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from config import firebase_app, db, admin_ids
@@ -17,11 +16,10 @@ from google.cloud.firestore_v1.base_query import FieldFilter  # nije potrebno al
 
 
 app = Flask(__name__)
-CORS(app, origins="*", methods=["GET", "POST", "PUT"])
+CORS(app, origins="*", methods=["GET", "POST", "PUT", "OPTIONS"])
 
 app.config["JWT_SECRET_KEY"] = "tajniKljuc"  # f"{secrets.SystemRandom().getrandbits(128)}"  # svaki put kad se resetuje app imacemo drugi
 jwt = JWTManager(app)
-
 
 
 @app.route('/api/register', methods=['POST'])
@@ -47,7 +45,7 @@ def login_user():
                 access_token = create_access_token(identity=user.id)
                 return jsonify({"access_token": access_token}), 200
             break
-    return {"message": "Invalid credentials"}, 400
+    return jsonify({"message": "Invalid credentials"}), 400
 
 
 def is_email_taken(email):
@@ -56,23 +54,6 @@ def is_email_taken(email):
     # print(result)
     # Check if the email is taken
     return bool(result)
-
-
-def test_is_email_taken():
-    # Test with a new email (should return False)
-    email_not_taken = "test_new_email@example.com"
-    result_not_taken = is_email_taken(email_not_taken)
-    print(f"Is '{email_not_taken}' taken? {result_not_taken}")
-
-    # Test with an existing email (should return True)
-    email_taken = "example@example.com"  # Replace with an actual existing email in your database
-    result_taken = is_email_taken(email_taken)
-    print(f"Is '{email_taken}' taken? {result_taken}")
-
-
-@app.route("/api")
-def main():
-    return "Welcome!"
 
 
 @app.route("/api/proizvodi", methods=['GET'])
@@ -89,22 +70,16 @@ def get_proizvodi():
     return jsonify(data)
 
 
-@app.route("/api/getUserName",methods=['GET'])
+@app.route("/api/getUserName", methods=['GET'])
 @jwt_required()
-def getUserName():
-    jwt_token = get_jwt().get("sub") #ovo je zapravo user id
-    data = dict()
-    users = db.collection("Users").get()
-    for user in users:
-        if user.id == jwt_token:
-            data[user.id] = user.to_dict()
-            return jsonify(data[jwt_token]["name"]),200
+def get_user_name():
+    jwt_token = get_jwt().get("sub")  # ovo je zapravo user id
+    user = db.collection("Users").document(jwt_token).get()
+    if user.exists:
+        user = user.to_dict()
+        return jsonify(user["name"]), 200
     return {"message": "Unauthorized access"}, 400
 
 
-
-
-
 if __name__ == "__main__":
-
     app.run()
