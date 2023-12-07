@@ -41,9 +41,15 @@ def login_user():
         users = user_ref.stream()
         for user in users:
             user_data = user.to_dict()
+<<<<<<< HEAD
+            if user_data["password"] == hash_pass(new_user.password):
+                access_token = create_access_token(identity=user.id)
+                return {"access_token": access_token}, 200
+=======
             if user_data['password'] == hash_pass(new_user.password):
                 access_token = create_access_token(identity=user.id)
                 return jsonify({"access_token": access_token}), 200
+>>>>>>> 181f730d098130871ce45b8835d6bae237e9b60d
             break
     return jsonify({"message": "Invalid credentials"}), 400
 
@@ -60,7 +66,11 @@ def is_email_taken(email):
 @jwt_required()
 def get_proizvodi():
     jwt_token = get_jwt()
+<<<<<<< HEAD
+    print(jwt_token)  # jer se identity cuva u SUB polju a ne u IDENTITY kako smo ranije specificirali, super je ovaj pajton nema sta
+=======
     # print(jwt) jer se identity cuva u SUB polju a ne u IDENTITY kako smo ranije specificirali, super je ovaj pajton nema sta
+>>>>>>> 181f730d098130871ce45b8835d6bae237e9b60d
     if jwt_token.get("sub") not in admin_ids:
         return {"message": "Unauthorized access"}, 400
     data = dict()
