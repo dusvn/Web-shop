@@ -40,4 +40,8 @@ class UserLoginSchema(Schema):
 
     @post_load
     def create_user_login(self, data, **kwargs):
+<<<<<<< HEAD
         return UserLogin(**data)
+=======
+        return UserLogin(**data)
+>>>>>>> 181f730d098130871ce45b8835d6bae237e9b60d

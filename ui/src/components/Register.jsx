@@ -137,7 +137,11 @@ export default function Register() {
             const response = await fetch(`${API_BASE_URL}/register`, {
                 method: 'POST',
                 headers: {
+<<<<<<< HEAD
                     'Content-Type': 'application/json;charset=UTF-8'
+=======
+                    'Content-Type': 'application/json;charset=UTF-8',
+>>>>>>> 181f730d098130871ce45b8835d6bae237e9b60d
                 },
                 body: JSON.stringify(userData)
             });

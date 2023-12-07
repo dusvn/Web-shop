@@ -1,3 +1,5 @@
+# from functools import wraps
+
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from config import firebase_app, db, admin_ids
@@ -21,6 +23,7 @@ app.config["JWT_SECRET_KEY"] = "tajniKljuc"  # f"{secrets.SystemRandom().getrand
 jwt = JWTManager(app)
 
 
+
 @app.route('/api/register', methods=['POST'])
 def register_user():  # ovaj metod view je da ako nam treba npr vise operacija tipa get delete put za isti obj
     new_user = UserSchema().load(request.get_json())
@@ -40,9 +43,15 @@ def login_user():
         users = user_ref.stream()
         for user in users:
             user_data = user.to_dict()
+<<<<<<< HEAD
             if user_data["password"] == hash_pass(new_user.password):
                 access_token = create_access_token(identity=user.id)
                 return {"access_token": access_token}, 200
+=======
+            if user_data['password'] == hash_pass(new_user.password):
+                access_token = create_access_token(identity=user.id)
+                return jsonify({"access_token": access_token}), 200
+>>>>>>> 181f730d098130871ce45b8835d6bae237e9b60d
             break
     return {"message": "Invalid credentials"}, 400
 
@@ -76,7 +85,11 @@ def main():
 @jwt_required()
 def get_proizvodi():
     jwt_token = get_jwt()
+<<<<<<< HEAD
     print(jwt_token)  # jer se identity cuva u SUB polju a ne u IDENTITY kako smo ranije specificirali, super je ovaj pajton nema sta
+=======
+    # print(jwt) jer se identity cuva u SUB polju a ne u IDENTITY kako smo ranije specificirali, super je ovaj pajton nema sta
+>>>>>>> 181f730d098130871ce45b8835d6bae237e9b60d
     if jwt_token.get("sub") not in admin_ids:
         return {"message": "Unauthorized access"}, 400
     data = dict()
@@ -86,43 +99,22 @@ def get_proizvodi():
     return jsonify(data)
 
 
-@app.route("/api/korisnici", methods=['GET'])
-def get_korisnici():
+@app.route("/api/getUserName",methods=['GET'])
+@jwt_required()
+def getUserName():
+    jwt_token = get_jwt().get("sub") #ovo je zapravo user id
     data = dict()
-    korisnici = db.collection("Korisnici").get()
-    for korisnik in korisnici:
-        data[korisnik.id] = korisnik.to_dict()
-    return jsonify(data)
+    users = db.collection("Users").get()
+    for user in users:
+        if user.id == jwt_token:
+            data[user.id] = user.to_dict()
+            return jsonify(data[jwt_token]["name"]),200
+    return {"message": "Unauthorized access"}, 400
 
 
-@app.route("/api/korisnik", methods=['GET'])
-def get_korisnik():
-    korisnik_parameter = request.args.get('email')
-    korisnik = db.collection("Korisnici").document(korisnik_parameter)
-    korisnik_snepsot = korisnik.get()
-    korisnik_objekat = korisnik_snepsot.to_dict()
-    if type(korisnik_objekat) is dict:
-        return jsonify(korisnik_objekat)
-    else:
-        return "Kita bato", 404
 
-""""
-@app.route("/api/korisnici", methods=['POST'])
-def napravi_korisnika():
-    newKorisnik = KorisnikSchema().load(request.get_json())
-    korisnik = db.collection("Korisnici").document(newKorisnik.email)
-    korisnik_snepsot = korisnik.get()
-    korisnik_objekat = korisnik_snepsot.to_dict()
-    if type(korisnik_objekat) is dict:
-        return "User already exists", 400
-    else:
-        data = {"Adresa": newKorisnik.adresa, "Broj telefona": newKorisnik.brtelefona, "Država": newKorisnik.drzava,
-                "Grad": newKorisnik.grad, "Ime": newKorisnik.ime, "Lozinka": newKorisnik.lozinka}
-        db.collection('Korisnici').document(newKorisnik.email).set(data)
-        return "User successfully created", 204
-"""
+
 
 if __name__ == "__main__":
-    #test_is_email_taken()
+
     app.run()
-    #test_is_email_taken()
