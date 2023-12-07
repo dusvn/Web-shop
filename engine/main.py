@@ -17,7 +17,7 @@ from google.cloud.firestore_v1.base_query import FieldFilter  # nije potrebno al
 
 
 app = Flask(__name__)
-CORS(app, origins="*", methods=["GET", "POST", "PUT"])
+CORS(app, origins= "*", methods=["GET", "POST", "PUT"])
 
 app.config["JWT_SECRET_KEY"] = "tajniKljuc"  # f"{secrets.SystemRandom().getrandbits(128)}"  # svaki put kad se resetuje app imacemo drugi
 jwt = JWTManager(app)
