@@ -17,7 +17,7 @@ from google.cloud.firestore_v1.base_query import FieldFilter  # nije potrebno al
 
 
 app = Flask(__name__)
-CORS(app, origins= "*", methods=["GET", "POST", "PUT"])
+CORS(app, origins="*", methods=["GET", "POST", "PUT", "OPTIONS"])
 
 app.config["JWT_SECRET_KEY"] = "tajniKljuc"  # f"{secrets.SystemRandom().getrandbits(128)}"  # svaki put kad se resetuje app imacemo drugi
 jwt = JWTManager(app)
@@ -50,6 +50,8 @@ def login_user():
     return {"message": "Invalid credentials"}, 400
 
 
+
+
 def is_email_taken(email):
     # Query the database to check if a user with the specified email exists
     result = db.collection("Users").where("email", "==", email).get()
@@ -70,35 +72,32 @@ def test_is_email_taken():
     print(f"Is '{email_taken}' taken? {result_taken}")
 
 
-@app.route("/api")
-def main():
-    return "Welcome!"
-
-
-@app.route("/api/proizvodi", methods=['GET'])
+@app.route("/api/getProducts", methods=['GET'])
 @jwt_required()
 def get_proizvodi():
-    jwt_token = get_jwt()
     # print(jwt) jer se identity cuva u SUB polju a ne u IDENTITY kako smo ranije specificirali, super je ovaj pajton nema sta
-    if jwt_token.get("sub") not in admin_ids:
+    # prepravljeno da bi mogla da se koristi metoda kod usera i kod admina 
+    jwt_token = get_jwt().get("sub")  # ovo je zapravo user id
+    user = db.collection("Users").document(jwt_token).get()
+    if user.exists:
+        data = dict()
+        proizvodi = db.collection("Products").get()
+        for proizvod in proizvodi:
+            data[proizvod.id] = proizvod.to_dict()
+        return jsonify(data)
+    else:
         return {"message": "Unauthorized access"}, 400
-    data = dict()
-    proizvodi = db.collection("Proizvodi").get()
-    for proizvod in proizvodi:
-        data[proizvod.id] = proizvod.to_dict()
-    return jsonify(data)
 
 
-@app.route("/api/getUserName",methods=['GET'])
+
+@app.route("/api/getUserName", methods=['GET'])
 @jwt_required()
-def getUserName():
-    jwt_token = get_jwt().get("sub") #ovo je zapravo user id
-    data = dict()
-    users = db.collection("Users").get()
-    for user in users:
-        if user.id == jwt_token:
-            data[user.id] = user.to_dict()
-            return jsonify(data[jwt_token]["name"]),200
+def get_user_name():
+    jwt_token = get_jwt().get("sub")  # ovo je zapravo user id
+    user = db.collection("Users").document(jwt_token).get()
+    if user.exists:
+        user = user.to_dict()
+        return jsonify(user["name"]), 200
     return {"message": "Unauthorized access"}, 400
 
 
