@@ -5,7 +5,7 @@ import { API_BASE_URL } from '../index';
 export default function Product() {
   const navigate = useNavigate();
 
-  const [productName, setProductName] = useState('');
+  const [name, setName] = useState('');
   const [productNameError, setProductNameError] = useState('');
 
   const [price, setPrice] = useState('');
@@ -38,7 +38,7 @@ export default function Product() {
 
   const handleProductNameChange = (e) => {
     const value = e.target.value;
-    setProductName(value);
+    setName(value);
     if (value.trim() === '') {
       setProductNameError('Product name must not be empty.');
     } else {
@@ -66,11 +66,44 @@ export default function Product() {
     }
   };
 
+//
+  const handleAddNewProduct = async (e) => {
+    const authToken = localStorage.getItem('jwtToken');
+    e.preventDefault();
+    const productData = {
+        "name":name,
+        "price":parseFloat(price),
+        "quantity":parseInt(quantity),
+        "currency":currency
+    };
+
+    try {
+        console.warn(productData)
+        const response = await fetch(`${API_BASE_URL}/addNewProduct`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json;charset=UTF-8',
+            },
+            body: JSON.stringify(productData)
+        });
+        console.warn(response);
+        if (response.status === 200) {
+            const data = await response.json(); // stavicemo nesto kao u povratku uspesno dodat proizvod pa njegovo ime 
+
+            navigate("/MainPage");
+        } else console.error("Product can't be added!");
+    } catch (error) {
+        console.warn(error);
+        console.error('Error during add new product.', error);
+    }
+};
+//
 
   return (
     <div className='grid grid-cols-1 sm:grid-cols-1 h-screen w-full'>
       <div className='bg-gray-800 flex flex-col justify-center'>
-        <form
+        <div
           className='max-w-[500px] w-full mx-auto bg-gray-900 p-8 px-8 rounded-lg'
           
         >
@@ -86,7 +119,7 @@ export default function Product() {
               }`}
               type='text'
               placeholder='Product name'
-              value={productName}
+              value={name}
               onChange={handleProductNameChange}
             />
             {productNameError && (
@@ -141,13 +174,14 @@ export default function Product() {
 
           <div>
             <button
-              type='submit'
+              
               className='w-full my-5 py-2 bg-teal-500 shadow-lg shadow-teal-500/40 hover:shadow-teal-500/40 text-white font-semibold rounded-lg'
+              onClick={handleAddNewProduct}
             >
               Add Product
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );

@@ -7,13 +7,11 @@ from additional_functions import hash_pass
 from firebase_admin import firestore
 from Model.User import *
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt
+from Model.Product import *
 import secrets
 import hashlib
 from google.cloud.firestore_v1.base_query import FieldFilter  # nije potrebno ali neka stoji jer moze da zatreba taj fieldFilter pri queryjovanju iz baze
-# from flask.views import MethodView
-# from webargs import fields, validate
-# from webargs.flaskparser import use_args
-# from passlib.hash import pbkdf2_sha256
+
 
 
 app = Flask(__name__)
@@ -53,10 +51,7 @@ def login_user():
 
 
 def is_email_taken(email):
-    # Query the database to check if a user with the specified email exists
     result = db.collection("Users").where("email", "==", email).get()
-    # print(result)
-    # Check if the email is taken
     return bool(result)
 
 
@@ -99,6 +94,16 @@ def get_user_name():
         user = user.to_dict()
         return jsonify(user["name"]), 200
     return {"message": "Unauthorized access"}, 400
+@app.route("/api/addNewProduct",methods=['POST'])
+@jwt_required()
+def addNewProduct():
+    jwt_token = get_jwt().get("sub")
+    newProduct = ProductSchema().load(request.get_json())
+    if jwt_token not in admin_ids:
+        return {"message": "This function only can be executed by admin"}, 400
+    db.collection("Products").add(newProduct.__dict__)
+    return {"message" : f"sucessfuly added product {newProduct.getName()}"},200
+
 
 
 
