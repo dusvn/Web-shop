@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate} from 'react-router-dom';
 import { API_BASE_URL } from '../index';
 
 export default function MainPage() {
@@ -11,6 +11,10 @@ export default function MainPage() {
     localStorage.removeItem('jwtToken');
     console.log(`This is jwt: ${localStorage.getItem('jwtToken')}`);
     navigate('/');
+  };
+
+  const handleAddNewProduct = () => {
+    navigate('/newProduct');
   };
 
   const fetchUserInformation = async () => {
@@ -111,8 +115,8 @@ export default function MainPage() {
                 {Object.keys(products).map(productId => {
                   const product = products[productId];
                   return (
-                    <tr key={productId}>
-                      <td className="border p-1">{product.name}</td>
+                    <tr key={productId} >
+                      <td className="border p-1" >{product.name}</td>
                       <td className="border p-1">{`${product.price} ${product.currency}`}</td>
                       <td className="border p-1">{product.quantity}</td>
                     </tr>
@@ -124,7 +128,7 @@ export default function MainPage() {
             <p>No products available</p>
           )}
           <div className="flex justify-end mt-4">
-            <button className="bg-teal-500 text-white px-4 py-2 rounded">Add new product</button>
+            <button className="bg-teal-500 text-white px-4 py-2 rounded" onClick={handleAddNewProduct}>Add new product</button>
           </div>
         </div>
       </div>

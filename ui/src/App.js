@@ -3,6 +3,8 @@ import {API_BASE_URL} from "./index";
 import Login  from "./components/Login";
 import Register from "./components/Register";
 import MainPage from "./components/MainPage";
+import Product from "./components/Product";
+
 import {
     BrowserRouter as Router,
     Routes,
@@ -20,6 +22,7 @@ function App() {
                     <Route exact path="/" element={<Login />} />
                     <Route path="/Register" element={<Register/>} />
                     <Route path="/MainPage" element={<MainPage/>} />
+                    <Route path="/newProduct" element={<Product/>} />
                 </Routes>
             </Router>
         </>
