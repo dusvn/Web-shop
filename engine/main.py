@@ -41,9 +41,15 @@ def login_user():
         users = user_ref.stream()
         for user in users:
             user_data = user.to_dict()
+
+            if user_data["password"] == hash_pass(new_user.password):
+                access_token = create_access_token(identity=user.id)
+                return {"access_token": access_token}, 200
+
             if user_data['password'] == hash_pass(new_user.password):
                 access_token = create_access_token(identity=user.id)
                 return jsonify({"access_token": access_token}), 200
+
             break
     return {"message": "Invalid credentials"}, 400
 
@@ -70,6 +76,7 @@ def test_is_email_taken():
 @app.route("/api/getProducts", methods=['GET'])
 @jwt_required()
 def get_proizvodi():
+
     # print(jwt) jer se identity cuva u SUB polju a ne u IDENTITY kako smo ranije specificirali, super je ovaj pajton nema sta
     # prepravljeno da bi mogla da se koristi metoda kod usera i kod admina 
     jwt_token = get_jwt().get("sub")  # ovo je zapravo user id
@@ -81,6 +88,13 @@ def get_proizvodi():
             data[proizvod.id] = proizvod.to_dict()
         return jsonify(data)
     else:
+
+    jwt_token = get_jwt()
+    print(jwt_token)  # jer se identity cuva u SUB polju a ne u IDENTITY kako smo ranije specificirali, super je ovaj pajton nema sta
+
+    # print(jwt) jer se identity cuva u SUB polju a ne u IDENTITY kako smo ranije specificirali, super je ovaj pajton nema sta
+
+    if jwt_token.get("sub") not in admin_ids:
         return {"message": "Unauthorized access"}, 400
 
 
