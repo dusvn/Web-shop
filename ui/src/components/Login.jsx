@@ -55,9 +55,7 @@ export default function Login() {
             if (response.status === 200) {
                 const data = await response.json()
                 localStorage.setItem('jwtToken', data.access_token);
-                console.warn(data.access_token);
-                console.log('Login successful');
-                navigate("/");
+                navigate("/MainPage");
             } else {
                 console.error('Login failed');
             }

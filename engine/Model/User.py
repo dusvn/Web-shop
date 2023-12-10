@@ -41,3 +41,4 @@ class UserLoginSchema(Schema):
     @post_load
     def create_user_login(self, data, **kwargs):
         return UserLogin(**data)
+
