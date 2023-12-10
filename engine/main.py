@@ -88,13 +88,6 @@ def get_proizvodi():
             data[proizvod.id] = proizvod.to_dict()
         return jsonify(data)
     else:
-
-    jwt_token = get_jwt()
-    print(jwt_token)  # jer se identity cuva u SUB polju a ne u IDENTITY kako smo ranije specificirali, super je ovaj pajton nema sta
-
-    # print(jwt) jer se identity cuva u SUB polju a ne u IDENTITY kako smo ranije specificirali, super je ovaj pajton nema sta
-
-    if jwt_token.get("sub") not in admin_ids:
         return {"message": "Unauthorized access"}, 400
 
 
