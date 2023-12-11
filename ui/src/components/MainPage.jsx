@@ -87,6 +87,32 @@ export default function MainPage() {
   };
 
 
+  const handleSubmit = async (e) => {
+    const selectedPairs = Object.entries(selectedValues).filter(([productId, value]) => value !== 0);
+    const authToken = localStorage.getItem('jwtToken');
+    try {
+      console.warn(selectedPairs);
+      const response = await fetch(`${API_BASE_URL}/addQuantity`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json;charset=UTF-8',
+        },
+        body: JSON.stringify(selectedPairs)
+      });
+      console.warn(response);
+      if (response.status === 200) {
+        setShowTable(false);
+        navigate("/MainPage");
+        window.location.reload(); // refresh page
+      } else {
+        console.error('Add quantity for this products are disabled');
+      }
+    } catch (error) {
+      console.warn(error);
+      console.error('Error during add quantity function', error);
+    }
+  };
 
   useEffect(() => {
     fetchUserInformation();
@@ -144,7 +170,7 @@ export default function MainPage() {
         </table>
 
         <div className="flex justify-end mt-4">
-          <button className="bg-teal-500 text-white px-4 py-2 rounded">Submit new</button>
+          <button className="bg-teal-500 text-white px-4 py-2 rounded" onClick={handleSubmit}>Submit new</button>
         </div>
       </div>
     );
