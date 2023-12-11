@@ -113,7 +113,20 @@ def addNewProduct():
     db.collection("Products").add(newProduct.__dict__)
     return {"message" : f"sucessfuly added product {newProduct.getName()}"},200
 
-
+@app.route("/api/addQuantity",methods=['POST'])
+@jwt_required()
+def addQuantity():
+    jwt_token = get_jwt().get("sub")
+    dataForUpdate = request.get_json()
+    if jwt_token not in admin_ids:
+        return {"message": "This function only can be executed by admin"}, 400
+    converted_dict_list = [{key: value} for key, value in dataForUpdate]
+    for data in converted_dict_list:
+        for key,value in data.items():
+            product = db.collection("Products").document(key)
+            productPreviousValue = (db.collection("Products").document(key).get()).get("quantity")
+            product.update({"quantity": productPreviousValue + value})
+    return {"message": "Quantity updated successfully"}, 200
 
 
 
