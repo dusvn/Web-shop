@@ -95,9 +95,13 @@ def get_proizvodi():
 def get_user_name():
     jwt_token = get_jwt().get("sub")  # ovo je zapravo user id
     user = db.collection("Users").document(jwt_token).get()
+    bill = db.collection("Bill").document(jwt_token).get()  #u bazi se cuva bill pod istip id-em kao user
     if user.exists:
         user = user.to_dict()
-        return jsonify(user["name"]), 200
+        bill = bill.to_dict()
+        return jsonify({**bill, "name" : user["name"]}), 200
+
+
     return {"message": "Unauthorized access"}, 400
 @app.route("/api/addNewProduct",methods=['POST'])
 @jwt_required()
