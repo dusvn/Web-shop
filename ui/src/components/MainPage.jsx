@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate} from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../index';
 
 export default function MainPage() {
@@ -7,6 +7,20 @@ export default function MainPage() {
   const [userName, setUserName] = useState('');
   const [products, setProducts] = useState({});
   const [currencyPairs, setCurrencyPairs] = useState([]);
+  const [showTable, setShowTable] = useState(false);
+  const [selectedValues, setSelectedValues] = useState({});
+
+  const handleChange = (event, productId) => {
+    const { value } = event.target;
+    setSelectedValues((prevSelectedValues) => ({
+      ...prevSelectedValues,
+      [productId]: Number(value),
+    }));
+  };
+
+  const handleShowTable = () => {
+    setShowTable(true);
+  };
 
   const handleSignOut = () => {
     localStorage.removeItem('jwtToken');
@@ -17,6 +31,11 @@ export default function MainPage() {
   const handleAddNewProduct = () => {
     navigate('/newProduct');
   };
+
+  const handleReloadMain = () => {
+    setShowTable(false);
+    navigate('/MainPage');
+  }
 
   const fetchUserInformation = async () => {
     try {
@@ -35,8 +54,8 @@ export default function MainPage() {
       const { name: userName } = userData;
 
       const currencyPairs = Object.entries(userData)
-      .filter(([key]) => key !== 'name') 
-      .map(([currency, { value }]) => ({ currency, value }));
+        .filter(([key]) => key !== 'name')
+        .map(([currency, { value }]) => ({ currency, value }));
 
       console.log(currencyPairs);
       setCurrencyPairs(currencyPairs);
@@ -74,9 +93,63 @@ export default function MainPage() {
     fetchProducts();
   }, []);
 
+  const renderTable = () => {
+    return (
+      <div className="w-1/2 mr-14">
+        <table className="w-full border-collapse border border-gray-700 rounded-lg">
+          <thead>
+            <tr>
+              <th className="bg-gray-800 p-1 border-r border-gray-700">
+                <h3 className="text-sm font-semibold mb-1">Name</h3>
+              </th>
+              <th className="bg-gray-800 p-1 border-r border-gray-700">
+                <h3 className="text-sm font-semibold mb-1">Price</h3>
+              </th>
+              <th className="bg-gray-800 p-1 border-r border-gray-700">
+                <h3 className="text-sm font-semibold mb-1">Quantity</h3>
+              </th>
+              <th className="bg-gray-800 p-1">
+                <h3 className="text-sm font-semibold mb-1">Select Quantity</h3>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.keys(products).map((productId) => {
+              const product = products[productId];
+              return (
+                <tr key={productId}>
+                  <td className="border p-1">{product.name}</td>
+                  <td className="border p-1">{`${product.price} ${product.currency}`}</td>
+                  <td className="border p-1">{product.quantity}</td>
+                  <td className="border p-1">
+                    <select
+                      id={`quantitySelect_${productId}`}
+                      className="bg-gray-800 text-white p-2 rounded w-full"
+                      value={selectedValues[productId] || 0}
+                      onChange={(event) => handleChange(event, productId)}
+                    >
+                      <option value={0}>0</option>
+                      <option value={2}>2</option>
+                      <option value={5}>5</option>
+                      <option value={10}>10</option>
+                      <option value={15}>15</option>
+                      <option value={20}>20</option>
+                      <option value={25}>25</option>
+                    </select>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
 
+        <div className="flex justify-end mt-4">
+          <button className="bg-teal-500 text-white px-4 py-2 rounded">Submit new</button>
+        </div>
+      </div>
+    );
+  };
 
-  
   return (
     <div className="flex flex-col h-screen bg-gray-900 text-white">
       <header className="bg-gray-700 p-4 flex justify-between items-center">
@@ -103,16 +176,17 @@ export default function MainPage() {
           <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Verify accounts</button>
           <br />
           <br />
-          <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Add Quantity</button>
+          <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full" onClick={handleShowTable}>Add quantity</button>
           <br />
           <br />
           <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Purchases</button>
           <br />
           <br />
+          <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full" onClick={handleReloadMain}>View products</button>
         </div>
 
-        <div className="w-1/2 mr-14">
-          {Object.keys(products).length > 0 ? (
+        {showTable ? renderTable() : (
+          <div className="w-1/2 mr-14">
             <table className="w-full border-collapse border border-gray-700 rounded-lg">
               <thead>
                 <tr>
@@ -140,13 +214,12 @@ export default function MainPage() {
                 })}
               </tbody>
             </table>
-          ) : (
-            <p>No products available</p>
-          )}
-          <div className="flex justify-end mt-4">
-            <button className="bg-teal-500 text-white px-4 py-2 rounded" onClick={handleAddNewProduct}>Add new product</button>
+
+            <div className="flex justify-end mt-4">
+              <button className="bg-teal-500 text-white px-4 py-2 rounded" onClick={handleAddNewProduct}>Add new product</button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
