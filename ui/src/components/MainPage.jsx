@@ -6,6 +6,7 @@ export default function MainPage() {
   const navigate = useNavigate();
   const [userName, setUserName] = useState('');
   const [products, setProducts] = useState({});
+  const [currencyPairs, setCurrencyPairs] = useState([]);
 
   const handleSignOut = () => {
     localStorage.removeItem('jwtToken');
@@ -30,7 +31,16 @@ export default function MainPage() {
       });
       const userData = await response.json();
       console.log(userData);
-      setUserName(userData);
+
+      const { name: userName } = userData;
+
+      const currencyPairs = Object.entries(userData)
+      .filter(([key]) => key !== 'name') 
+      .map(([currency, { value }]) => ({ currency, value }));
+
+      console.log(currencyPairs);
+      setCurrencyPairs(currencyPairs);
+      setUserName(userName);
     } catch (error) {
       console.error('Error fetching user information:', error);
     }
@@ -76,18 +86,24 @@ export default function MainPage() {
         </button>
       </header>
 
-      <div className="my-2">
-        <br />
-        <br />
-        <br />
+
+
+      <div className="my-2 p-4 bg-gray-800 rounded-lg">
+        <h2 className="text-2xl mb-4 text-teal-500">Balance</h2>
+        <ul className="list-disc pl-4">
+          {currencyPairs.map(({ currency, value }, index) => (
+            <li key={index} className="text-white">{`${currency}: ${value}`}</li>
+          ))}
+        </ul>
       </div>
+
 
       <div className="flex justify-between">
         <div className="w-1/4 ml-8">
-          <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Users</button>
+          <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Verify accounts</button>
           <br />
           <br />
-          <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Products</button>
+          <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Add Quantity</button>
           <br />
           <br />
           <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Purchases</button>
