@@ -41,7 +41,7 @@ export default function MainPage() {
     try {
       const authToken = localStorage.getItem('jwtToken');
       console.log(`Ovo je poslati token ${authToken}`);
-      const response = await fetch(`${API_BASE_URL}/getUserName`, {
+      const response = await fetch(`${API_BASE_URL}/getUserInfo`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authToken}`,
@@ -53,8 +53,7 @@ export default function MainPage() {
 
       const { name: userName } = userData;
 
-      const currencyPairs = Object.entries(userData)
-        .filter(([key]) => key !== 'name')
+      const currencyPairs = Object.entries(userData.bill)
         .map(([currency, { value }]) => ({ currency, value }));
 
       console.log(currencyPairs);
