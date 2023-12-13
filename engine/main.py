@@ -10,16 +10,27 @@ from flask_jwt_extended import JWTManager, create_access_token, jwt_required, ge
 from Model.Product import *
 import secrets
 import hashlib
-from google.cloud.firestore_v1.base_query import FieldFilter  # nije potrebno ali neka stoji jer moze da zatreba taj fieldFilter pri queryjovanju iz baze
-
-
+from google.cloud.firestore_v1.base_query import \
+    FieldFilter  # nije potrebno ali neka stoji jer moze da zatreba taj fieldFilter pri queryjovanju iz baze
+import requests
 
 app = Flask(__name__)
 CORS(app, origins="*", methods=["GET", "POST", "PUT", "OPTIONS"])
 
-app.config["JWT_SECRET_KEY"] = "tajniKljuc"  # f"{secrets.SystemRandom().getrandbits(128)}"  # svaki put kad se resetuje app imacemo drugi
+app.config[
+    "JWT_SECRET_KEY"] = "tajniKljuc"  # f"{secrets.SystemRandom().getrandbits(128)}"  # svaki put kad se resetuje app imacemo drugi
 jwt = JWTManager(app)
 
+
+def send_simple_message(to, subject, body):
+    domain = "sandboxb0f0be2586b549509fca7012e9a9a4b6.mailgun.org"
+    return requests.post(
+        f"https://api.mailgun.net/v3/{domain}/messages",
+        auth=("api", "35116fe5147ca3836a8e266ae9341f63-07f37fca-b40b01ee"),
+        data={"from": "Excited User <mailgun@{domain}>",
+              "to": [to],
+              "subject": subject,
+              "text": body})
 
 
 @app.route('/api/register', methods=['POST'])
@@ -30,6 +41,13 @@ def register_user():  # ovaj metod view je da ako nam treba npr vise operacija t
         return jsonify({"error": "Email is already taken"}), 400
     new_user.password = hash_pass(new_user.password)
     db.collection("Users").add(new_user.__dict__)  # ovo vraca nesto, probaj odatle da izvuces id i da ga zapises u bazu
+
+    send_simple_message(
+        to="lukadjelic529@gmail.com",
+        subject="Doso novi batica",
+        body="Nek crkne"
+    )
+
     return jsonify({"message": "User registered successfully"}), 201
 
 
@@ -54,8 +72,6 @@ def login_user():
     return {"message": "Invalid credentials"}, 400
 
 
-
-
 def is_email_taken(email):
     result = db.collection("Users").where("email", "==", email).get()
     return bool(result)
@@ -76,7 +92,6 @@ def test_is_email_taken():
 @app.route("/api/getProducts", methods=['GET'])
 @jwt_required()
 def get_proizvodi():
-
     # prepravljeno da bi mogla da se koristi metoda kod usera i kod admina
     jwt_token = get_jwt().get("sub")  # ovo je zapravo user id
     user = db.collection("Users").document(jwt_token).get()
@@ -88,22 +103,21 @@ def get_proizvodi():
         return jsonify(data)
 
 
-
-
 @app.route("/api/getUserName", methods=['GET'])
 @jwt_required()
 def get_user_name():
     jwt_token = get_jwt().get("sub")  # ovo je zapravo user id
     user = db.collection("Users").document(jwt_token).get()
-    bill = db.collection("Bill").document(jwt_token).get()  #u bazi se cuva bill pod istip id-em kao user
+    bill = db.collection("Bill").document(jwt_token).get()  # u bazi se cuva bill pod istip id-em kao user
     if user.exists:
         user = user.to_dict()
         bill = bill.to_dict()
-        return jsonify({**bill, "name" : user["name"]}), 200
-
+        return jsonify({**bill, "name": user["name"]}), 200
 
     return {"message": "Unauthorized access"}, 400
-@app.route("/api/addNewProduct",methods=['POST'])
+
+
+@app.route("/api/addNewProduct", methods=['POST'])
 @jwt_required()
 def addNewProduct():
     jwt_token = get_jwt().get("sub")
@@ -111,9 +125,10 @@ def addNewProduct():
     if jwt_token not in admin_ids:
         return {"message": "This function only can be executed by admin"}, 400
     db.collection("Products").add(newProduct.__dict__)
-    return {"message" : f"sucessfuly added product {newProduct.getName()}"},200
+    return {"message": f"sucessfuly added product {newProduct.getName()}"}, 200
 
-@app.route("/api/addQuantity",methods=['POST'])
+
+@app.route("/api/addQuantity", methods=['POST'])
 @jwt_required()
 def addQuantity():
     jwt_token = get_jwt().get("sub")
@@ -122,15 +137,22 @@ def addQuantity():
         return {"message": "This function only can be executed by admin"}, 400
     converted_dict_list = [{key: value} for key, value in dataForUpdate]
     for data in converted_dict_list:
-        for key,value in data.items():
+        for key, value in data.items():
             product = db.collection("Products").document(key)
             productPreviousValue = (db.collection("Products").document(key).get()).get("quantity")
             product.update({"quantity": productPreviousValue + value})
     return {"message": "Quantity updated successfully"}, 200
 
-
-
+@app.route("/api/addConverted", methods=['POST'])
+@jwt_required()
+def addConverted():
+    currenciesUpdate = request.get_json()
+    converted_dict_list = [{key: value} for key, value in currenciesUpdate]
+    for data in converted_dict_list:
+        for key, value in data.items():
+            # dodavanje u bill to cu posle da ubacim
+    return {"message": "Converted succesfully"}, 200
+# provera da li ima dovoljno za konverziju isto bill kad ubacim
 
 if __name__ == "__main__":
-
     app.run()

@@ -114,6 +114,33 @@ export default function MainPage() {
     }
   };
 
+  const handleConvert = async (e) => {
+    const selectedPairs = Object.entries(selectedValues).filter(([productId, value]) => value !== 0);
+    const authToken = localStorage.getItem('jwtToken');
+    try {
+      console.warn(selectedPairs);
+      const response = await fetch(`${API_BASE_URL}/addConverted`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json;charset=UTF-8',
+        },
+        body: JSON.stringify(selectedPairs)
+      });
+      console.warn(response);
+      if (response.status === 200) {
+        //setShowTable(false); ovde ce ide za vracanje na prvobitni izgled
+        navigate("/MainPage");
+        window.location.reload(); // refresh page
+      } else {
+        console.error('Add quantity for this products are disabled');
+      }
+    } catch (error) {
+      console.warn(error);
+      console.error('Error during addConvert function', error);
+    }
+  };
+
   useEffect(() => {
     fetchUserInformation();
     fetchProducts();
