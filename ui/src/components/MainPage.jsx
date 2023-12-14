@@ -9,6 +9,8 @@ export default function MainPage() {
   const [currencyPairs, setCurrencyPairs] = useState([]);
   const [showTable, setShowTable] = useState(false);
   const [selectedValues, setSelectedValues] = useState({});
+  const [isUserAdmin, setIsUserAdmin] = useState(false);
+  const [isUserVerified, setIsUserVerified] = useState(false);
 
   const handleChange = (event, productId) => {
     const { value } = event.target;
@@ -51,21 +53,24 @@ export default function MainPage() {
       const userData = await response.json();
       console.log(userData);
 
-      const { name: userName } = userData;
+      const { name: userName, is_admin: isUserAdmin, is_verified: isUserVerified } = userData;
 
-      const currencyPairs = Object.entries(userData.bill)
-        .map(([currency, { value }]) => ({ currency, value }));
+      if(userData.bill !== null){
+        const currencyPairs = Object.entries(userData.bill)
+            .map(([currency, { value }]) => ({ currency, value }));
+            setCurrencyPairs(currencyPairs);
+      }
 
       console.log(currencyPairs);
-      setCurrencyPairs(currencyPairs);
       setUserName(userName);
+      setIsUserAdmin(isUserAdmin);
+      setIsUserVerified(isUserVerified);
     } catch (error) {
       console.error('Error fetching user information:', error);
     }
   };
 
   const fetchProducts = () => {
-
     const authToken = localStorage.getItem('jwtToken');
     fetch(`${API_BASE_URL}/getProducts`, {
       method: 'GET',
@@ -198,15 +203,35 @@ export default function MainPage() {
 
       <div className="flex justify-between">
         <div className="w-1/4 ml-8">
-          <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Verify accounts</button>
-          <br />
-          <br />
-          <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full" onClick={handleShowTable}>Add quantity</button>
-          <br />
-          <br />
-          <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Purchases</button>
-          <br />
-          <br />
+          {!isUserAdmin && (
+              <>
+                <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Add billing info</button>
+                <br />
+                <br />
+                <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Edit profile</button>
+                <br />
+                <br />
+                <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Purchase history</button>
+                <br />
+                <br />
+                <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Add funds</button>
+                <br />
+                <br />
+              </>
+          )}
+          {isUserAdmin && (
+              <>
+                <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Verify accounts</button>
+                <br />
+                <br />
+                <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full" onClick={handleShowTable}>Add quantity</button>
+                <br />
+                <br />
+                <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Purchases</button>
+                <br />
+                <br />
+              </>
+          )}
           <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full" onClick={handleReloadMain}>View products</button>
         </div>
 

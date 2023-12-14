@@ -81,7 +81,10 @@ def get_user_info():
         user = user.to_dict()
         bill = bill.to_dict()
         is_admin = jwt_token in admin_ids
-        return jsonify({"bill": bill, "name": user["name"], "is_admin": is_admin, "is_verified": user["verified"]}), 200
+        name = "name"
+        space = " "
+        lastName = "lastName"
+        return jsonify({"bill": bill, "name": f"{user[name] + space + user[lastName]}", "is_admin": is_admin, "is_verified": user["verified"]}), 200
     return jsonify({"message": "User not found"}), 404
 
 
