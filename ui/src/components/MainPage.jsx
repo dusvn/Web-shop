@@ -189,25 +189,35 @@ export default function MainPage() {
         </button>
       </header>
 
-
-
       <div className="my-2 p-4 bg-gray-800 rounded-lg">
         <h2 className="text-2xl mb-4 text-teal-500">Balance</h2>
-        <ul className="list-disc pl-4">
-          {currencyPairs.map(({ currency, value }, index) => (
-            <li key={index} className="text-white">{`${currency}: ${value}`}</li>
-          ))}
-        </ul>
+        {!isUserVerified && (
+            <>
+              <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Add billing info</button>
+              <br />
+              <br />
+            </>
+        )}
+        {!(!currencyPairs) && (
+            <>
+              <ul className="list-disc pl-4">
+              {currencyPairs.map(({ currency, value }, index) => (
+                <li key={index} className="text-white">{`${currency}: ${value}`}</li>
+              ))}
+              </ul>
+            </>
+        )}
+        {(currencyPairs.length === 0) && (
+            <><p>An admin needs to approve your billing info.</p>
+            </>
+        )}
       </div>
-
 
       <div className="flex justify-between">
         <div className="w-1/4 ml-8">
+          <br />
           {!isUserAdmin && (
               <>
-                <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Add billing info</button>
-                <br />
-                <br />
                 <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Edit profile</button>
                 <br />
                 <br />

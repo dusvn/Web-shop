@@ -39,15 +39,9 @@ def login_user():
         users = user_ref.stream()
         for user in users:
             user_data = user.to_dict()
-
             if user_data["password"] == hash_pass(new_user.password):
                 access_token = create_access_token(identity=user.id)
                 return {"access_token": access_token}, 200
-
-            if user_data['password'] == hash_pass(new_user.password):
-                access_token = create_access_token(identity=user.id)
-                return jsonify({"access_token": access_token}), 200
-
             break
     return {"message": "Invalid credentials"}, 400
 
@@ -82,9 +76,8 @@ def get_user_info():
         bill = bill.to_dict()
         is_admin = jwt_token in admin_ids
         name = "name"
-        space = " "
         lastName = "lastName"
-        return jsonify({"bill": bill, "name": f"{user[name] + space + user[lastName]}", "is_admin": is_admin, "is_verified": user["verified"]}), 200
+        return jsonify({"bill": bill, "name": f"{user[name]} {user[lastName]}", "is_admin": is_admin, "is_verified": user["verified"]}), 200
     return jsonify({"message": "User not found"}), 404
 
 
