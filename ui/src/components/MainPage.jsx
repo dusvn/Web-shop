@@ -11,6 +11,7 @@ export default function MainPage() {
   const [selectedValues, setSelectedValues] = useState({});
   const [isUserAdmin, setIsUserAdmin] = useState(false);
   const [isUserVerified, setIsUserVerified] = useState(false);
+  const [isCardAdded, setIsCardAdded] = useState(false);
 
   const [izValute, setIzValute] = useState('USD');
   const [uValutu, setUValutu] = useState('EUR');
@@ -139,6 +140,7 @@ export default function MainPage() {
       setUserName(userName);
       setIsUserAdmin(isUserAdmin);
       setIsUserVerified(isUserVerified);
+      setIsCardAdded(isCardAdded);
     } catch (error) {
       console.error('Error fetching user information:', error);
     }
@@ -226,6 +228,86 @@ export default function MainPage() {
     fetchProducts();
   }, []);
 
+  const [formData, setFormData] = useState({
+    cardNumber: '',
+    expirationDate: '',
+    ccv: '',
+  });
+
+  const [validationStatus, setValidationStatus] = useState({
+    cardNumber: false,
+    expirationDate: false,
+    ccv: false,
+  });
+
+  // Update the handleInputChange function
+  const handleInputChange = (field, value) => {
+    setFormData((prevFormData) => ({
+      ...prevFormData,
+      [field]: value,
+    }));
+  };
+
+  // Implement validation functions
+  const validateCardNumber = () => {
+    return /^\d{4} \d{4} \d{4} \d{4}$/.test(formData.cardNumber);
+  };
+
+  const validateExpirationDate = () => {
+    return /^(0[1-9]|1[0-2])\/\d{2}$/.test(formData.expirationDate);
+  };
+
+  const validateCCV = () => {
+    return /^\d{3}$/.test(formData.ccv);
+  };
+
+  const validateForm = () => {
+    return (
+      validateCardNumber() &&
+      validateExpirationDate() &&
+      validateCCV()
+    );
+  };
+
+  const handleBillingInfoSubmit = async (e) => {
+    e.preventDefault();
+    if (validateForm()) {
+      console.log('Form submitted successfully:', formData);
+      const creditCardData = {
+        card_number: formData.cardNumber,
+        expiration_date: formData.expirationDate,
+        ccv: formData.ccv,
+      };
+
+    const authToken = localStorage.getItem('jwtToken');
+    try {
+      console.warn(creditCardData);
+      const response = await fetch(`${API_BASE_URL}/addNewCreditCard`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json;charset=UTF-8',
+        },
+        body: JSON.stringify(creditCardData),
+      });
+
+      console.warn(response);
+
+      if (response.status === 200) {
+        const data = await response.json();
+
+        navigate("/MainPage");
+      } else {
+        console.error("Credit card can't be added!");
+      }
+    } catch (error) {
+      console.warn(error);
+      console.error('Error during add new credit card.', error);
+    }
+      } else {
+        console.log('Form submission failed. Please check the input values.');
+      }
+  };
 
   const renderTable = () => {
     return (
@@ -298,12 +380,63 @@ export default function MainPage() {
       <div className="flex">
       <div className="my-2 p-4 bg-gray-800 rounded-lg mr-4">
         <h2 className="text-2xl mb-4 text-teal-500">Balance</h2>
-        {!isUserVerified && (
-            <>
-              <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Add billing info</button>
-              <br />
-              <br />
-            </>
+        {!isCardAdded && (
+          <div className="mb-4 w-full">
+            <h3 className="text-lg font-semibold text-teal-500 mb-2">Add Billing Info</h3>
+            <form onSubmit={handleBillingInfoSubmit}>
+              <div className="flex flex-col mb-4">
+                <label className="text-white mb-2" htmlFor="cardNumber">Card Number:</label>
+                <input
+                  type="text"
+                  id="cardNumber"
+                  name="cardNumber"
+                  placeholder="Enter card number"
+                  className={`bg-gray-700 text-white p-2 rounded ${validateCardNumber() ? 'border-green-500' : 'border-red-500'}`}
+                  onChange={(e) => handleInputChange('cardNumber', e.target.value)}
+                />
+                <p className={`text-sm mt-1 ${validateCardNumber() ? 'hidden' : 'text-red-500'}`}>
+                  Enter a valid card number
+                </p>
+              </div>
+              <div className="flex flex-row mb-4">
+                <div className="flex flex-col mr-4">
+                  <label className="text-white mb-2" htmlFor="expirationDate">Expiration Date:</label>
+                  <input
+                    type="text"
+                    id="expirationDate"
+                    name="expirationDate"
+                    placeholder="MM/YY"
+                    className={`bg-gray-700 text-white p-2 rounded ${validateExpirationDate() ? 'border-green-500' : 'border-red-500'}`}
+                    onChange={(e) => handleInputChange('expirationDate', e.target.value)}
+                  />
+                  <p className={`text-sm mt-1 ${validateExpirationDate() ? 'hidden' : 'text-red-500'}`}>
+                    Enter a valid exp. date
+                  </p>
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-white mb-2" htmlFor="ccv">CCV:</label>
+                  <input
+                    type="text"
+                    id="ccv"
+                    name="ccv"
+                    placeholder="Enter CCV"
+                    className={`bg-gray-700 text-white p-2 rounded ${validateCCV() ? 'border-green-500' : 'border-red-500'}`}
+                    onChange={(e) => handleInputChange('ccv', e.target.value)}
+                  />
+                  <p className={`text-sm mt-1 ${validateCCV() ? 'hidden' : 'text-red-500'}`}>
+                    Enter a valid CCV
+                  </p>
+                </div>
+              </div>
+              <button
+                type="submit"
+                className="bg-teal-500 text-white px-4 py-2 rounded"
+                disabled={!validateForm()}
+              >
+                Submit
+              </button>
+            </form>
+          </div>
         )}
         {!(!currencyPairs) && (
             <>
@@ -314,7 +447,7 @@ export default function MainPage() {
               </ul>
             </>
         )}
-        {(currencyPairs.length === 0) && isUserVerified && (
+        {(currencyPairs.length === 0) && isCardAdded && (
             <><p>An admin needs to approve your billing info.</p>
             </>
         )}
