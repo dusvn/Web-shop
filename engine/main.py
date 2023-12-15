@@ -10,8 +10,7 @@ from flask_jwt_extended import JWTManager, create_access_token, jwt_required, ge
 from Model.Product import *
 import secrets
 import hashlib
-from google.cloud.firestore_v1.base_query import \
-    FieldFilter  # nije potrebno ali neka stoji jer moze da zatreba taj fieldFilter pri queryjovanju iz baze
+from google.cloud.firestore_v1.base_query import FieldFilter  # nije potrebno ali neka stoji jer moze da zatreba taj fieldFilter pri queryjovanju iz baze
 import requests
 
 app = Flask(__name__)
@@ -59,15 +58,9 @@ def login_user():
         users = user_ref.stream()
         for user in users:
             user_data = user.to_dict()
-
             if user_data["password"] == hash_pass(new_user.password):
                 access_token = create_access_token(identity=user.id)
                 return {"access_token": access_token}, 200
-
-            if user_data['password'] == hash_pass(new_user.password):
-                access_token = create_access_token(identity=user.id)
-                return jsonify({"access_token": access_token}), 200
-
             break
     return {"message": "Invalid credentials"}, 400
 
@@ -77,21 +70,9 @@ def is_email_taken(email):
     return bool(result)
 
 
-def test_is_email_taken():
-    # Test with a new email (should return False)
-    email_not_taken = "test_new_email@example.com"
-    result_not_taken = is_email_taken(email_not_taken)
-    print(f"Is '{email_not_taken}' taken? {result_not_taken}")
-
-    # Test with an existing email (should return True)
-    email_taken = "example@example.com"  # Replace with an actual existing email in your database
-    result_taken = is_email_taken(email_taken)
-    print(f"Is '{email_taken}' taken? {result_taken}")
-
-
 @app.route("/api/getProducts", methods=['GET'])
 @jwt_required()
-def get_proizvodi():
+def get_products():
     # prepravljeno da bi mogla da se koristi metoda kod usera i kod admina
     jwt_token = get_jwt().get("sub")  # ovo je zapravo user id
     user = db.collection("Users").document(jwt_token).get()
@@ -103,23 +84,25 @@ def get_proizvodi():
         return jsonify(data)
 
 
-@app.route("/api/getUserName", methods=['GET'])
+@app.route("/api/getUserInfo", methods=['GET'])
 @jwt_required()
-def get_user_name():
+def get_user_info():
     jwt_token = get_jwt().get("sub")  # ovo je zapravo user id
     user = db.collection("Users").document(jwt_token).get()
     bill = db.collection("Bill").document(jwt_token).get()  # u bazi se cuva bill pod istip id-em kao user
     if user.exists:
         user = user.to_dict()
         bill = bill.to_dict()
-        return jsonify({**bill, "name": user["name"]}), 200
-
-    return {"message": "Unauthorized access"}, 400
+        is_admin = jwt_token in admin_ids
+        name = "name"
+        lastName = "lastName"
+        return jsonify({"bill": bill, "name": f"{user[name]} {user[lastName]}", "is_admin": is_admin, "is_verified": user["verified"]}), 200
+    return jsonify({"message": "User not found"}), 404
 
 
 @app.route("/api/addNewProduct", methods=['POST'])
 @jwt_required()
-def addNewProduct():
+def add_new_product():
     jwt_token = get_jwt().get("sub")
     newProduct = ProductSchema().load(request.get_json())
     if jwt_token not in admin_ids:
@@ -130,11 +113,11 @@ def addNewProduct():
 
 @app.route("/api/addQuantity", methods=['POST'])
 @jwt_required()
-def addQuantity():
+def add_quantity():
     jwt_token = get_jwt().get("sub")
-    dataForUpdate = request.get_json()
     if jwt_token not in admin_ids:
         return {"message": "This function only can be executed by admin"}, 400
+    dataForUpdate = request.get_json()
     converted_dict_list = [{key: value} for key, value in dataForUpdate]
     for data in converted_dict_list:
         for key, value in data.items():

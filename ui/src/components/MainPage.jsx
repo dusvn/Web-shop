@@ -9,6 +9,8 @@ export default function MainPage() {
   const [currencyPairs, setCurrencyPairs] = useState([]);
   const [showTable, setShowTable] = useState(false);
   const [selectedValues, setSelectedValues] = useState({});
+  const [isUserAdmin, setIsUserAdmin] = useState(false);
+  const [isUserVerified, setIsUserVerified] = useState(false);
 
   const [izValute, setIzValute] = useState('USD');
   const [uValutu, setUValutu] = useState('EUR');
@@ -116,7 +118,7 @@ export default function MainPage() {
     try {
       const authToken = localStorage.getItem('jwtToken');
       console.log(`Ovo je poslati token ${authToken}`);
-      const response = await fetch(`${API_BASE_URL}/getUserName`, {
+      const response = await fetch(`${API_BASE_URL}/getUserInfo`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authToken}`,
@@ -126,22 +128,24 @@ export default function MainPage() {
       const userData = await response.json();
       console.log(userData);
 
-      const { name: userName } = userData;
+      const { name: userName, is_admin: isUserAdmin, is_verified: isUserVerified } = userData;
 
-      const currencyPairs = Object.entries(userData)
-        .filter(([key]) => key !== 'name')
-        .map(([currency, { value }]) => ({ currency, value }));
+      if(userData.bill !== null){
+        const currencyPairs = Object.entries(userData.bill)
+            .map(([currency, { value }]) => ({ currency, value }));
+            setCurrencyPairs(currencyPairs);
+      }
 
       console.log(currencyPairs);
-      setCurrencyPairs(currencyPairs);
       setUserName(userName);
+      setIsUserAdmin(isUserAdmin);
+      setIsUserVerified(isUserVerified);
     } catch (error) {
       console.error('Error fetching user information:', error);
     }
   };
 
   const fetchProducts = () => {
-
     const authToken = localStorage.getItem('jwtToken');
     fetch(`${API_BASE_URL}/getProducts`, {
       method: 'GET',
@@ -295,11 +299,26 @@ export default function MainPage() {
       <div className="flex">
       <div className="my-2 p-4 bg-gray-800 rounded-lg mr-4">
         <h2 className="text-2xl mb-4 text-teal-500">Balance</h2>
-        <ul className="list-disc pl-4">
-          {currencyPairs.map(({ currency, value }, index) => (
-            <li key={index} className="text-white">{`${currency}: ${value}`}</li>
-          ))}
-        </ul>
+        {!isUserVerified && (
+            <>
+              <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Add billing info</button>
+              <br />
+              <br />
+            </>
+        )}
+        {!(!currencyPairs) && (
+            <>
+              <ul className="list-disc pl-4">
+              {currencyPairs.map(({ currency, value }, index) => (
+                <li key={index} className="text-white">{`${currency}: ${value}`}</li>
+              ))}
+              </ul>
+            </>
+        )}
+        {(currencyPairs.length === 0) && (
+            <><p>An admin needs to approve your billing info.</p>
+            </>
+        )}
       </div>
 
       <div className="my-2 p-4 bg-gray-800 rounded-lg">
@@ -343,15 +362,33 @@ export default function MainPage() {
 
       <div className="flex justify-between">
         <div className="w-1/4 ml-8">
-          <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Verify accounts</button>
           <br />
-          <br />
-          <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full" onClick={handleShowTable}>Add quantity</button>
-          <br />
-          <br />
-          <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Purchases</button>
-          <br />
-          <br />
+          {!isUserAdmin && (
+              <>
+                <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Edit profile</button>
+                <br />
+                <br />
+                <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Purchase history</button>
+                <br />
+                <br />
+                <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Add funds</button>
+                <br />
+                <br />
+              </>
+          )}
+          {isUserAdmin && (
+              <>
+                <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Verify accounts</button>
+                <br />
+                <br />
+                <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full" onClick={handleShowTable}>Add quantity</button>
+                <br />
+                <br />
+                <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Purchases</button>
+                <br />
+                <br />
+              </>
+          )}
           <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full" onClick={handleReloadMain}>View products</button>
         </div>
 
