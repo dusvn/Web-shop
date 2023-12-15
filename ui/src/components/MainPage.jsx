@@ -19,28 +19,20 @@ export default function MainPage() {
   const [konvertovaniIznos, setKonvertovaniIznos] = useState(null);
   const [dostupneValute, setDostupneValute] = useState([]);
   const [sveValute, setSveValute] = useState([]);
+  const [konverzijaError, setKonverzijaError] = useState('');
+  const [userData, setUserData] = useState({});
 
   useEffect(() => {
     const fetchExchangeRate = async () => {
       try {
-
-        const authToken = localStorage.getItem('jwtToken');
-      console.log(`Ovo je poslati token ${authToken}`);
-      const response1 = await fetch(`${API_BASE_URL}/getUserInfo`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      const userData = await response1.json();
-
       const { name: userName } = userData;
 
       const currencyPairs = Object.entries(userData.bill)
         .map(([currency, { value }]) => ({ currency, value }));
       setCurrencyPairs(currencyPairs);
 
+
+      //setIzValute(currencyPairs.keys()[0]) ovo da probam kad budemo imali normalnog korisnika
       if(izValute !== ''){
         const response = await fetch(`https://open.er-api.com/v6/latest/${izValute}`);
         const data = await response.json();
@@ -125,6 +117,7 @@ export default function MainPage() {
         },
       });
       const userData = await response.json();
+      setUserData(userData);
       console.log(userData);
 
       const { name: userName, is_admin: isUserAdmin, is_verified: isUserVerified } = userData;
@@ -139,6 +132,8 @@ export default function MainPage() {
       setUserName(userName);
       setIsUserAdmin(isUserAdmin);
       setIsUserVerified(isUserVerified);
+
+
     } catch (error) {
       console.error('Error fetching user information:', error);
     }
@@ -214,6 +209,7 @@ export default function MainPage() {
         window.location.reload(); // refresh page
       } else {
         console.error('Add converted for this products are disabled');
+        setKonverzijaError('Maximum ammount for chosen currency exceeded');
       }
     } catch (error) {
       console.warn(error);
@@ -344,6 +340,7 @@ export default function MainPage() {
         <div>
           <label className="text-white">Iznos:</label>
           <input type="number" value={iznos} onChange={(e) => setIznos(e.target.value)} className="bg-gray-700 text-white p-2 rounded" />
+          {konverzijaError && <p className="text-red-500 text-sm">{konverzijaError}</p>}
         </div>
       </div>
         <div className="mt-4">
