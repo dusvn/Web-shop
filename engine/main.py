@@ -9,6 +9,7 @@ from Model.User import *
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt
 from Model.Product import *
 from Model.CreditCard import *
+
 import secrets
 import hashlib
 from google.cloud.firestore_v1.base_query import FieldFilter  # nije potrebno ali neka stoji jer moze da zatreba taj fieldFilter pri queryjovanju iz baze
@@ -44,8 +45,8 @@ def register_user():  # ovaj metod view je da ako nam treba npr vise operacija t
 
     send_simple_message(
         to="lukadjelic529@gmail.com",
-        subject="Doso novi batica",
-        body="Nek crkne"
+        subject="Registracija novog korisnika",
+        body="Korisnik " + new_user.email + "se registrovao na aplikaciji"
     )
 
     return jsonify({"message": "User registered successfully"}), 201
@@ -97,10 +98,14 @@ def get_user_info():
         is_admin = jwt_token in admin_ids
         name = "name"
         lastName = "lastName"
+
+        return jsonify({"bill": bill, "name": f"{user[name]} {user[lastName]}", "is_admin": is_admin, "is_verified": user["verified"]}), 200
+
         is_card_added = True
         if user["cardNum"] == "":
             is_card_added = False
         return jsonify({"bill": bill, "name": f"{user[name]} {user[lastName]}", "is_admin": is_admin, "is_verified": user["verified"], "is_card_added": is_card_added}), 200
+
     return jsonify({"message": "User not found"}), 404
 
 
@@ -139,7 +144,7 @@ def addConverted():
     converted_bill_dict = bill.to_dict()
     currenciesUpdate = request.get_json()
 
-    prva_vrednost = int(next(iter(currenciesUpdate.values())))
+    prva_vrednost = float(next(iter(currenciesUpdate.values())))
     if prva_vrednost == 0:
         return {"message": "Vrednost mora biti veca od 0"}, 400
 
@@ -159,6 +164,7 @@ def addConverted():
             })
 
     return {"message": "Converted succesfully"}, 200
+
 
 
 @app.route("/api/addNewCreditCard", methods=['POST'])

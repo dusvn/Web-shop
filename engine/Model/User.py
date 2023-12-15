@@ -15,6 +15,7 @@ class User:
         self.cardNum = ""
 
 
+
 class UserSchema(Schema):
     name = fields.Str(required=True)
     lastName = fields.Str(required=True)
