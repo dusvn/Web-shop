@@ -1,6 +1,6 @@
 # from functools import wraps
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, json
 from flask_cors import CORS
 from config import firebase_app, db, admin_ids
 from additional_functions import hash_pass
@@ -143,16 +143,36 @@ def addQuantity():
             product.update({"quantity": productPreviousValue + value})
     return {"message": "Quantity updated successfully"}, 200
 
+
 @app.route("/api/addConverted", methods=['POST'])
 @jwt_required()
 def addConverted():
+    jwt_token = get_jwt().get("sub")
+    bill = db.collection("Bill").document(jwt_token).get()
+    converted_bill_dict = bill.to_dict()
     currenciesUpdate = request.get_json()
-    converted_dict_list = [{key: value} for key, value in currenciesUpdate]
-    for data in converted_dict_list:
-        for key, value in data.items():
-            # dodavanje u bill to cu posle da ubacim
+
+    prva_vrednost = int(next(iter(currenciesUpdate.values())))
+    if prva_vrednost == 0:
+        return {"message": "Vrednost mora biti veca od 0"}, 400
+
+    first_key = list(currenciesUpdate.keys())[0]
+    second_key = list(currenciesUpdate.keys())[1]
+    previousValue1 = converted_bill_dict.get(first_key, {}).get('value', 0)
+    if previousValue1 < prva_vrednost:
+        return {"message": "Nema dovoljno novca za konverziju"}, 400
+    previousValue2 = converted_bill_dict.get(second_key, {}).get('value', 0)
+
+    for key in converted_bill_dict.keys():
+        if key == first_key:
+            racun = db.collection("Bill").document(jwt_token)
+            racun.update({
+                first_key: {'value': float(previousValue1) - float(currenciesUpdate[first_key])},
+                second_key: {'value': float(previousValue2) + currenciesUpdate[second_key]}
+            })
+
     return {"message": "Converted succesfully"}, 200
-# provera da li ima dovoljno za konverziju isto bill kad ubacim
+
 
 if __name__ == "__main__":
     app.run()

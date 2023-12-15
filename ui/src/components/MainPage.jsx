@@ -10,6 +10,81 @@ export default function MainPage() {
   const [showTable, setShowTable] = useState(false);
   const [selectedValues, setSelectedValues] = useState({});
 
+  const [izValute, setIzValute] = useState('USD');
+  const [uValutu, setUValutu] = useState('EUR');
+  const [iznos, setIznos] = useState(0);
+  const [kurs, setKurs] = useState(null);
+  const [konvertovaniIznos, setKonvertovaniIznos] = useState(null);
+  const [dostupneValute, setDostupneValute] = useState([]);
+  const [sveValute, setSveValute] = useState([]);
+
+  useEffect(() => {
+    const fetchExchangeRate = async () => {
+      try {
+
+        const authToken = localStorage.getItem('jwtToken');
+      console.log(`Ovo je poslati token ${authToken}`);
+      const response1 = await fetch(`${API_BASE_URL}/getUserName`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      const userData = await response1.json();
+
+      const { name: userName } = userData;
+
+      const currencyPairs = Object.entries(userData)
+        .filter(([key]) => key !== 'name')
+        .map(([currency, { value }]) => ({ currency, value }));
+      setCurrencyPairs(currencyPairs);
+
+      if(izValute !== ''){
+        const response = await fetch(`https://open.er-api.com/v6/latest/${izValute}`);
+        const data = await response.json();
+        const exchangeRate = data.rates[uValutu];
+        setKurs(exchangeRate);
+
+        //const availableCurrencies = Object.keys(data.rates);
+
+        const availableCurrencies = currencyPairs.map(({ currency }) => currency);
+        setDostupneValute(availableCurrencies);
+      }
+
+      } catch (error) {
+        console.error('Greška prilikom dobijanja kursa:', error);
+      }
+    };
+
+    fetchExchangeRate();
+  }, [izValute, uValutu]);
+
+  useEffect(() => {
+    if (kurs !== null) {
+      const convertedAmount = iznos * kurs;
+      setKonvertovaniIznos(convertedAmount);
+    }
+  }, [iznos, kurs]);
+
+  useEffect(() => {
+    const fetchCurrencies = async () => {
+      try {
+        const response = await fetch(`https://open.er-api.com/v6/latest/${uValutu}`);
+        const data = await response.json();
+
+        const currencyCodes = Object.keys(data.rates);
+
+        setSveValute(currencyCodes);
+
+      } catch (error) {
+        console.error('Error fetching currencies:', error);
+      }
+    };
+
+    fetchCurrencies();
+  }, []);
+
   const handleChange = (event, productId) => {
     const { value } = event.target;
     setSelectedValues((prevSelectedValues) => ({
@@ -115,29 +190,31 @@ export default function MainPage() {
   };
 
   const handleConvert = async (e) => {
-    const selectedPairs = Object.entries(selectedValues).filter(([productId, value]) => value !== 0);
+    const currencyPairsMap = new Map([
+      [izValute, iznos],
+      [uValutu, konvertovaniIznos],
+      ]);
+    const arrayFromMap = Array.from(currencyPairsMap);
+
     const authToken = localStorage.getItem('jwtToken');
     try {
-      console.warn(selectedPairs);
       const response = await fetch(`${API_BASE_URL}/addConverted`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json;charset=UTF-8',
         },
-        body: JSON.stringify(selectedPairs)
+        body: JSON.stringify(Object.fromEntries(currencyPairsMap))
       });
       console.warn(response);
       if (response.status === 200) {
-        //setShowTable(false); ovde ce ide za vracanje na prvobitni izgled
-        navigate("/MainPage");
         window.location.reload(); // refresh page
       } else {
-        console.error('Add quantity for this products are disabled');
+        console.error('Add converted for this products are disabled');
       }
     } catch (error) {
       console.warn(error);
-      console.error('Error during addConvert function', error);
+      console.error('Error during add converted function', error);
     }
   };
 
@@ -145,6 +222,7 @@ export default function MainPage() {
     fetchUserInformation();
     fetchProducts();
   }, []);
+
 
   const renderTable = () => {
     return (
@@ -214,7 +292,8 @@ export default function MainPage() {
 
 
 
-      <div className="my-2 p-4 bg-gray-800 rounded-lg">
+      <div className="flex">
+      <div className="my-2 p-4 bg-gray-800 rounded-lg mr-4">
         <h2 className="text-2xl mb-4 text-teal-500">Balance</h2>
         <ul className="list-disc pl-4">
           {currencyPairs.map(({ currency, value }, index) => (
@@ -222,6 +301,44 @@ export default function MainPage() {
           ))}
         </ul>
       </div>
+
+      <div className="my-2 p-4 bg-gray-800 rounded-lg">
+      <h2 className="text-2xl mb-4 text-teal-500">Konvertor Valuta</h2>
+      <div className="flex">
+        <div className="mr-4">
+          <label className="text-white">Iz valute:</label>
+          <select value={izValute} onChange={(e) => setIzValute(e.target.value)} className="bg-gray-700 text-white p-2 rounded">
+            <option value="" disabled>Izaberite valutu</option>
+            {dostupneValute.map((valuta) => (
+              <option key={valuta} value={valuta}>{valuta}</option>
+            ))}
+          </select>
+        </div>
+        <div className="mr-4">
+          <label className="text-white">U valutu:</label>
+          <select value={uValutu} onChange={(e) => setUValutu(e.target.value)} className="bg-gray-700 text-white p-2 rounded">
+            <option value="" disabled>Izaberite valutu</option>
+            {sveValute.map((valuta) => (
+              <option key={valuta} value={valuta}>{valuta}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="text-white">Iznos:</label>
+          <input type="number" value={iznos} onChange={(e) => setIznos(e.target.value)} className="bg-gray-700 text-white p-2 rounded" />
+        </div>
+      </div>
+        <div className="mt-4">
+        <button onClick={handleConvert} className="bg-teal-500 text-white px-4 py-2 rounded">Konvertuj</button>
+      </div>
+      <div>
+        <p className="text-white">Kurs: {kurs}</p>
+        {konvertovaniIznos !== null && (
+          <p className="text-white">{iznos} {izValute} = {konvertovaniIznos} {uValutu}</p>
+        )}
+      </div>
+    </div>
+    </div>
 
 
       <div className="flex justify-between">
