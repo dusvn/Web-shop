@@ -101,7 +101,8 @@ def get_user_info():
         is_card_added = True
         if user["cardNum"] == "":
             is_card_added = False
-        return jsonify({"bill": bill, "name": f"{user[name]} {user[lastName]}", "is_admin": is_admin, "is_verified": user["verified"], "is_card_added": is_card_added}), 200
+        return jsonify({"bill": bill, "name": f"{user[name]} {user[lastName]}", "is_admin": is_admin,
+                        "is_verified": user["verified"], "is_card_added": is_card_added}), 200
     return jsonify({"message": "User not found"}), 404
 
 
