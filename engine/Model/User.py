@@ -12,6 +12,10 @@ class User:
         self.email = email
         self.password = password
         self.verified = False
+<<<<<<< HEAD
+=======
+        self.cardNum = ""
+>>>>>>> origin/Kumova-slama
 
 
 class UserSchema(Schema):
