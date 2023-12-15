@@ -47,8 +47,8 @@ def register_user():  # ovaj metod view je da ako nam treba npr vise operacija t
 
     send_simple_message(
         to="lukadjelic529@gmail.com",
-        subject="Doso novi batica",
-        body="Nek crkne"
+        subject="Registracija novog korisnika",
+        body="Korisnik " + new_user.email + "se registrovao na aplikaciji"
     )
 
     return jsonify({"message": "User registered successfully"}), 201
@@ -146,7 +146,7 @@ def addConverted():
     converted_bill_dict = bill.to_dict()
     currenciesUpdate = request.get_json()
 
-    prva_vrednost = int(next(iter(currenciesUpdate.values())))
+    prva_vrednost = float(next(iter(currenciesUpdate.values())))
     if prva_vrednost == 0:
         return {"message": "Vrednost mora biti veca od 0"}, 400
 
