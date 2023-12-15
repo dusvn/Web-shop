@@ -128,7 +128,7 @@ export default function MainPage() {
       const userData = await response.json();
       console.log(userData);
 
-      const { name: userName, is_admin: isUserAdmin, is_verified: isUserVerified } = userData;
+      const { name: userName, is_admin: isUserAdmin, is_verified: isUserVerified, is_card_added: isCardAdded } = userData;
 
       if(userData.bill !== null){
         const currencyPairs = Object.entries(userData.bill)
@@ -240,7 +240,6 @@ export default function MainPage() {
     ccv: false,
   });
 
-  // Update the handleInputChange function
   const handleInputChange = (field, value) => {
     setFormData((prevFormData) => ({
       ...prevFormData,
@@ -248,7 +247,6 @@ export default function MainPage() {
     }));
   };
 
-  // Implement validation functions
   const validateCardNumber = () => {
     return /^\d{4} \d{4} \d{4} \d{4}$/.test(formData.cardNumber);
   };
