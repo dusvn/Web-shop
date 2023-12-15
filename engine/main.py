@@ -8,10 +8,8 @@ from firebase_admin import firestore
 from Model.User import *
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt
 from Model.Product import *
-<<<<<<< HEAD
-=======
 from Model.CreditCard import *
->>>>>>> origin/Kumova-slama
+
 import secrets
 import hashlib
 from google.cloud.firestore_v1.base_query import FieldFilter  # nije potrebno ali neka stoji jer moze da zatreba taj fieldFilter pri queryjovanju iz baze
@@ -100,14 +98,14 @@ def get_user_info():
         is_admin = jwt_token in admin_ids
         name = "name"
         lastName = "lastName"
-<<<<<<< HEAD
+
         return jsonify({"bill": bill, "name": f"{user[name]} {user[lastName]}", "is_admin": is_admin, "is_verified": user["verified"]}), 200
-=======
+
         is_card_added = True
         if user["cardNum"] == "":
             is_card_added = False
         return jsonify({"bill": bill, "name": f"{user[name]} {user[lastName]}", "is_admin": is_admin, "is_verified": user["verified"], "is_card_added": is_card_added}), 200
->>>>>>> origin/Kumova-slama
+
     return jsonify({"message": "User not found"}), 404
 
 
@@ -166,8 +164,7 @@ def addConverted():
             })
 
     return {"message": "Converted succesfully"}, 200
-<<<<<<< HEAD
-=======
+
 
 
 @app.route("/api/addNewCreditCard", methods=['POST'])
@@ -180,7 +177,6 @@ def add_new_card():
     print(newCard)
     user.update({"cardNum": newCard.card_number})
     return {"message": f"sucessfuly added new card"}, 200
->>>>>>> origin/Kumova-slama
 
 
 if __name__ == "__main__":
