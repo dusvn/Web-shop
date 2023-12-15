@@ -11,6 +11,8 @@ class User:
         self.phoneNum = phoneNum
         self.email = email
         self.password = password
+        self.verified = False
+        self.cardNum = ""
 
 
 class UserSchema(Schema):
@@ -41,3 +43,4 @@ class UserLoginSchema(Schema):
     @post_load
     def create_user_login(self, data, **kwargs):
         return UserLogin(**data)
+
