@@ -320,7 +320,7 @@ export default function MainPage() {
         )}
       </div>
 
-      <div className="my-2 p-4 bg-gray-800 rounded-lg">
+        {!isUserAdmin && <div className="my-2 p-4 bg-gray-800 rounded-lg">
       <h2 className="text-2xl mb-4 text-teal-500">Konvertor Valuta</h2>
       <div className="flex">
         <div className="mr-4">
@@ -355,7 +355,7 @@ export default function MainPage() {
           <p className="text-white">{iznos} {izValute} = {konvertovaniIznos} {uValutu}</p>
         )}
       </div>
-    </div>
+    </div>}
     </div>
 
 
