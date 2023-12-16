@@ -11,6 +11,9 @@ class User:
         self.phoneNum = phoneNum
         self.email = email
         self.password = password
+        self.verified = False
+        self.cardNum = ""
+
 
 
 class UserSchema(Schema):

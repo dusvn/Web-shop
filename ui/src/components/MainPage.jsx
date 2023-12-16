@@ -9,6 +9,83 @@ export default function MainPage() {
   const [currencyPairs, setCurrencyPairs] = useState([]);
   const [showTable, setShowTable] = useState(false);
   const [selectedValues, setSelectedValues] = useState({});
+  const [isUserAdmin, setIsUserAdmin] = useState(false);
+  const [isUserVerified, setIsUserVerified] = useState(false);
+  const [isCardAdded, setIsCardAdded] = useState(false);
+
+  const [izValute, setIzValute] = useState('USD');
+  const [uValutu, setUValutu] = useState('EUR');
+  const [iznos, setIznos] = useState(0);
+  const [kurs, setKurs] = useState(null);
+  const [konvertovaniIznos, setKonvertovaniIznos] = useState(null);
+  const [dostupneValute, setDostupneValute] = useState([]);
+  const [sveValute, setSveValute] = useState([]);
+
+  useEffect(() => {
+    const fetchExchangeRate = async () => {
+      try {
+
+        const authToken = localStorage.getItem('jwtToken');
+      console.log(`Ovo je poslati token ${authToken}`);
+      const response1 = await fetch(`${API_BASE_URL}/getUserInfo`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      const userData = await response1.json();
+
+      const { name: userName } = userData;
+
+      const currencyPairs = Object.entries(userData.bill)
+        .map(([currency, { value }]) => ({ currency, value }));
+      setCurrencyPairs(currencyPairs);
+
+      if(izValute !== ''){
+        const response = await fetch(`https://open.er-api.com/v6/latest/${izValute}`);
+        const data = await response.json();
+        const exchangeRate = data.rates[uValutu];
+        setKurs(exchangeRate);
+
+        //const availableCurrencies = Object.keys(data.rates);
+
+        const availableCurrencies = currencyPairs.map(({ currency }) => currency);
+        setDostupneValute(availableCurrencies);
+      }
+
+      } catch (error) {
+        console.error('Greška prilikom dobijanja kursa:', error);
+      }
+    };
+
+    fetchExchangeRate();
+  }, [izValute, uValutu]);
+
+  useEffect(() => {
+    if (kurs !== null) {
+      const convertedAmount = iznos * kurs;
+      setKonvertovaniIznos(convertedAmount);
+    }
+  }, [iznos, kurs]);
+
+  useEffect(() => {
+    const fetchCurrencies = async () => {
+      try {
+        const response = await fetch(`https://open.er-api.com/v6/latest/${uValutu}`);
+        const data = await response.json();
+
+        const currencyCodes = Object.keys(data.rates);
+
+        setSveValute(currencyCodes);
+
+      } catch (error) {
+        console.error('Error fetching currencies:', error);
+      }
+    };
+
+    fetchCurrencies();
+  }, []);
 
   const handleChange = (event, productId) => {
     const { value } = event.target;
@@ -41,7 +118,7 @@ export default function MainPage() {
     try {
       const authToken = localStorage.getItem('jwtToken');
       console.log(`Ovo je poslati token ${authToken}`);
-      const response = await fetch(`${API_BASE_URL}/getUserName`, {
+      const response = await fetch(`${API_BASE_URL}/getUserInfo`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${authToken}`,
@@ -51,22 +128,25 @@ export default function MainPage() {
       const userData = await response.json();
       console.log(userData);
 
-      const { name: userName } = userData;
+      const { name: userName, is_admin: isUserAdmin, is_verified: isUserVerified, is_card_added: isCardAdded } = userData;
 
-      const currencyPairs = Object.entries(userData)
-        .filter(([key]) => key !== 'name')
-        .map(([currency, { value }]) => ({ currency, value }));
+      if(userData.bill !== null){
+        const currencyPairs = Object.entries(userData.bill)
+            .map(([currency, { value }]) => ({ currency, value }));
+            setCurrencyPairs(currencyPairs);
+      }
 
       console.log(currencyPairs);
-      setCurrencyPairs(currencyPairs);
       setUserName(userName);
+      setIsUserAdmin(isUserAdmin);
+      setIsUserVerified(isUserVerified);
+      setIsCardAdded(isCardAdded);
     } catch (error) {
       console.error('Error fetching user information:', error);
     }
   };
 
   const fetchProducts = () => {
-
     const authToken = localStorage.getItem('jwtToken');
     fetch(`${API_BASE_URL}/getProducts`, {
       method: 'GET',
@@ -114,10 +194,118 @@ export default function MainPage() {
     }
   };
 
+  const handleConvert = async (e) => {
+    const currencyPairsMap = new Map([
+      [izValute, iznos],
+      [uValutu, konvertovaniIznos],
+      ]);
+    const arrayFromMap = Array.from(currencyPairsMap);
+
+    const authToken = localStorage.getItem('jwtToken');
+    try {
+      const response = await fetch(`${API_BASE_URL}/addConverted`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json;charset=UTF-8',
+        },
+        body: JSON.stringify(Object.fromEntries(currencyPairsMap))
+      });
+      console.warn(response);
+      if (response.status === 200) {
+        window.location.reload(); // refresh page
+      } else {
+        console.error('Add converted for this products are disabled');
+      }
+    } catch (error) {
+      console.warn(error);
+      console.error('Error during add converted function', error);
+    }
+  };
+
   useEffect(() => {
     fetchUserInformation();
     fetchProducts();
   }, []);
+
+  const [formData, setFormData] = useState({
+    cardNumber: '',
+    expirationDate: '',
+    ccv: '',
+  });
+
+  const [validationStatus, setValidationStatus] = useState({
+    cardNumber: false,
+    expirationDate: false,
+    ccv: false,
+  });
+
+  const handleInputChange = (field, value) => {
+    setFormData((prevFormData) => ({
+      ...prevFormData,
+      [field]: value,
+    }));
+  };
+
+  const validateCardNumber = () => {
+    return /^\d{4} \d{4} \d{4} \d{4}$/.test(formData.cardNumber);
+  };
+
+  const validateExpirationDate = () => {
+    return /^(0[1-9]|1[0-2])\/\d{2}$/.test(formData.expirationDate);
+  };
+
+  const validateCCV = () => {
+    return /^\d{3}$/.test(formData.ccv);
+  };
+
+  const validateForm = () => {
+    return (
+      validateCardNumber() &&
+      validateExpirationDate() &&
+      validateCCV()
+    );
+  };
+
+  const handleBillingInfoSubmit = async (e) => {
+    e.preventDefault();
+    if (validateForm()) {
+      console.log('Form submitted successfully:', formData);
+      const creditCardData = {
+        card_number: formData.cardNumber,
+        expiration_date: formData.expirationDate,
+        ccv: formData.ccv,
+      };
+
+    const authToken = localStorage.getItem('jwtToken');
+    try {
+      console.warn(creditCardData);
+      const response = await fetch(`${API_BASE_URL}/addNewCreditCard`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json;charset=UTF-8',
+        },
+        body: JSON.stringify(creditCardData),
+      });
+
+      console.warn(response);
+
+      if (response.status === 200) {
+        const data = await response.json();
+
+        navigate("/MainPage");
+      } else {
+        console.error("Credit card can't be added!");
+      }
+    } catch (error) {
+      console.warn(error);
+      console.error('Error during add new credit card.', error);
+    }
+      } else {
+        console.log('Form submission failed. Please check the input values.');
+      }
+  };
 
   const renderTable = () => {
     return (
@@ -187,27 +375,150 @@ export default function MainPage() {
 
 
 
-      <div className="my-2 p-4 bg-gray-800 rounded-lg">
+      <div className="flex">
+      <div className="my-2 p-4 bg-gray-800 rounded-lg mr-4">
         <h2 className="text-2xl mb-4 text-teal-500">Balance</h2>
-        <ul className="list-disc pl-4">
-          {currencyPairs.map(({ currency, value }, index) => (
-            <li key={index} className="text-white">{`${currency}: ${value}`}</li>
-          ))}
-        </ul>
+        {!isCardAdded && (
+          <div className="mb-4 w-full">
+            <h3 className="text-lg font-semibold text-teal-500 mb-2">Add Billing Info</h3>
+            <form onSubmit={handleBillingInfoSubmit}>
+              <div className="flex flex-col mb-4">
+                <label className="text-white mb-2" htmlFor="cardNumber">Card Number:</label>
+                <input
+                  type="text"
+                  id="cardNumber"
+                  name="cardNumber"
+                  placeholder="Enter card number"
+                  className={`bg-gray-700 text-white p-2 rounded ${validateCardNumber() ? 'border-green-500' : 'border-red-500'}`}
+                  onChange={(e) => handleInputChange('cardNumber', e.target.value)}
+                />
+                <p className={`text-sm mt-1 ${validateCardNumber() ? 'hidden' : 'text-red-500'}`}>
+                  Enter a valid card number
+                </p>
+              </div>
+              <div className="flex flex-row mb-4">
+                <div className="flex flex-col mr-4">
+                  <label className="text-white mb-2" htmlFor="expirationDate">Expiration Date:</label>
+                  <input
+                    type="text"
+                    id="expirationDate"
+                    name="expirationDate"
+                    placeholder="MM/YY"
+                    className={`bg-gray-700 text-white p-2 rounded ${validateExpirationDate() ? 'border-green-500' : 'border-red-500'}`}
+                    onChange={(e) => handleInputChange('expirationDate', e.target.value)}
+                  />
+                  <p className={`text-sm mt-1 ${validateExpirationDate() ? 'hidden' : 'text-red-500'}`}>
+                    Enter a valid exp. date
+                  </p>
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-white mb-2" htmlFor="ccv">CCV:</label>
+                  <input
+                    type="text"
+                    id="ccv"
+                    name="ccv"
+                    placeholder="Enter CCV"
+                    className={`bg-gray-700 text-white p-2 rounded ${validateCCV() ? 'border-green-500' : 'border-red-500'}`}
+                    onChange={(e) => handleInputChange('ccv', e.target.value)}
+                  />
+                  <p className={`text-sm mt-1 ${validateCCV() ? 'hidden' : 'text-red-500'}`}>
+                    Enter a valid CCV
+                  </p>
+                </div>
+              </div>
+              <button
+                type="submit"
+                className="bg-teal-500 text-white px-4 py-2 rounded"
+                disabled={!validateForm()}
+              >
+                Submit
+              </button>
+            </form>
+          </div>
+        )}
+        {!(!currencyPairs) && (
+            <>
+              <ul className="list-disc pl-4">
+              {currencyPairs.map(({ currency, value }, index) => (
+                <li key={index} className="text-white">{`${currency}: ${value}`}</li>
+              ))}
+              </ul>
+            </>
+        )}
+        {(currencyPairs.length === 0) && isCardAdded && (
+            <><p>An admin needs to approve your billing info.</p>
+            </>
+        )}
       </div>
+
+        {!isUserAdmin && <div className="my-2 p-4 bg-gray-800 rounded-lg">
+      <h2 className="text-2xl mb-4 text-teal-500">Konvertor Valuta</h2>
+      <div className="flex">
+        <div className="mr-4">
+          <label className="text-white">Iz valute:</label>
+          <select value={izValute} onChange={(e) => setIzValute(e.target.value)} className="bg-gray-700 text-white p-2 rounded">
+            <option value="" disabled>Izaberite valutu</option>
+            {dostupneValute.map((valuta) => (
+              <option key={valuta} value={valuta}>{valuta}</option>
+            ))}
+          </select>
+        </div>
+        <div className="mr-4">
+          <label className="text-white">U valutu:</label>
+          <select value={uValutu} onChange={(e) => setUValutu(e.target.value)} className="bg-gray-700 text-white p-2 rounded">
+            <option value="" disabled>Izaberite valutu</option>
+            {sveValute.map((valuta) => (
+              <option key={valuta} value={valuta}>{valuta}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="text-white">Iznos:</label>
+          <input type="number" value={iznos} onChange={(e) => setIznos(e.target.value)} className="bg-gray-700 text-white p-2 rounded" />
+        </div>
+      </div>
+        <div className="mt-4">
+        <button onClick={handleConvert} className="bg-teal-500 text-white px-4 py-2 rounded">Konvertuj</button>
+      </div>
+      <div>
+        <p className="text-white">Kurs: {kurs}</p>
+        {konvertovaniIznos !== null && (
+          <p className="text-white">{iznos} {izValute} = {konvertovaniIznos} {uValutu}</p>
+        )}
+      </div>
+    </div>}
+    </div>
 
 
       <div className="flex justify-between">
         <div className="w-1/4 ml-8">
-          <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Verify accounts</button>
           <br />
-          <br />
-          <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full" onClick={handleShowTable}>Add quantity</button>
-          <br />
-          <br />
-          <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Purchases</button>
-          <br />
-          <br />
+          {!isUserAdmin && (
+              <>
+                <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Edit profile</button>
+                <br />
+                <br />
+                <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Purchase history</button>
+                <br />
+                <br />
+                <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Add funds</button>
+                <br />
+                <br />
+              </>
+          )}
+          {isUserAdmin && (
+              <>
+                <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Verify accounts</button>
+                <br />
+                <br />
+                <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full" onClick={handleShowTable}>Add quantity</button>
+                <br />
+                <br />
+                <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Purchases</button>
+                <br />
+                <br />
+              </>
+          )}
           <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full" onClick={handleReloadMain}>View products</button>
         </div>
 
