@@ -169,11 +169,71 @@ def addConverted():
 def add_new_card():
     jwt_token = get_jwt().get("sub")
     user = db.collection("Users").document(jwt_token)
+    if jwt_token in admin_ids:
+        return {"message": "This function cannont be executet by admin"}, 400
     newCard = CreditCardSchema().load(request.get_json())
     db.collection("CreditCards").document(newCard.card_number).set(newCard.__dict__)
-    print(newCard)
     user.update({"cardNum": newCard.card_number})
+    user.update({"verified" : True})
     return {"message": f"sucessfuly added new card"}, 200
+
+@app.route("/api/getNotVerifiedUsers",methods = ["GET"])
+@jwt_required()
+def getNotVerifiedUsers():
+    jwt_token = get_jwt().get("sub")
+    if jwt_token not in admin_ids:
+        return {"message": "This function only can be executed by admin"}, 400
+
+    admin = db.collection("Users").document(jwt_token)
+
+    users_query = (
+        db.collection("Users")
+        .where("verified", "==", True) # sve koji su podneli zahtev za verifikaciju
+        .where("__name__", "!=", admin)  #sem admina koji to odobrava
+    )
+
+
+    users = users_query.stream()
+
+    users_data = [
+        {
+            "id": user.id,
+            **user.to_dict()
+        }
+        for user in users
+    ]
+    #mora ovako zato sto nece obrisati sve ne diraj kod spreman sam da ubijem za ovo
+    filtered_users_data = [
+        user_data for user_data in users_data
+        if not db.collection("Bill").document(user_data['id']).get().exists
+    ]
+
+    usersForApprove = dict()
+    for user in filtered_users_data:
+        name = user["name"]
+        lastName = user["lastName"]
+        cardNum = user["cardNum"]
+        user_id = user["id"]  # Retrieve the document ID
+        usersForApprove[user_id] = {"name": name, "lastName": lastName, "cardNum": cardNum}
+
+    return jsonify(usersForApprove), 200
+
+
+@app.route("/api/approveCards",methods= ["POST"])
+@jwt_required()
+def approveCards():
+    jwt_token = get_jwt().get("sub")
+    if jwt_token not in admin_ids:
+        return {"message" : "This function cannont be executet by admin"},400
+    usersForApprove = request.get_json()
+    print(usersForApprove)
+    for key,value in usersForApprove.items():
+        cardNum = usersForApprove[key]["cardNum"] # uzima broj kartice
+        currentCard = db.collection("CreditCards").document(cardNum) # trazi tu karticu
+        currentCard.update({"admin_approve": True}) #verifikuje je
+        db.collection("Bill").document(key).set({}) # pravim racun bez valuta
+    return {"message" : "sucessfuly approved new cards"}
+
 
 
 if __name__ == "__main__":

@@ -109,6 +109,10 @@ export default function MainPage() {
     navigate('/newProduct');
   };
 
+  const handleVerify = () => {
+    navigate('/verifyUsers');
+  };
+
   const handleReloadMain = () => {
     setShowTable(false);
     navigate('/MainPage');
@@ -267,6 +271,7 @@ export default function MainPage() {
     );
   };
 
+
   const handleBillingInfoSubmit = async (e) => {
     e.preventDefault();
     if (validateForm()) {
@@ -293,8 +298,8 @@ export default function MainPage() {
 
       if (response.status === 200) {
         const data = await response.json();
+        window.location.reload();
 
-        navigate("/MainPage");
       } else {
         console.error("Credit card can't be added!");
       }
@@ -376,6 +381,7 @@ export default function MainPage() {
 
 
       <div className="flex">
+      
       <div className="my-2 p-4 bg-gray-800 rounded-lg mr-4">
         <h2 className="text-2xl mb-4 text-teal-500">Balance</h2>
         {!isCardAdded && (
@@ -508,7 +514,7 @@ export default function MainPage() {
           )}
           {isUserAdmin && (
               <>
-                <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Verify accounts</button>
+                <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full" onClick={handleVerify}>Verify accounts</button>
                 <br />
                 <br />
                 <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full" onClick={handleShowTable}>Add quantity</button>
@@ -553,7 +559,9 @@ export default function MainPage() {
             </table>
 
             <div className="flex justify-end mt-4">
+              { isUserAdmin ? (
               <button className="bg-teal-500 text-white px-4 py-2 rounded" onClick={handleAddNewProduct}>Add new product</button>
+              ) : null }
             </div>
           </div>
         )}
