@@ -5,6 +5,7 @@ class CreditCard:
         self.card_number = card_number
         self.expiration_date = expiration_date
         self.ccv = ccv
+        self.admin_approve = False
 
     def __str__(self):
         return f"CardNumber: {self.card_number}, ExpirationDate: {self.expiration_date}, CCV: {self.ccv}"

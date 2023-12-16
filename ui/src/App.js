@@ -4,6 +4,7 @@ import Login  from "./components/Login";
 import Register from "./components/Register";
 import MainPage from "./components/MainPage";
 import Product from "./components/Product";
+import VerifyUsers from "./components/Verify";
 
 import {
     BrowserRouter as Router,
@@ -11,6 +12,7 @@ import {
     Route,
     Navigate,
 } from "react-router-dom";
+
 
 
 
@@ -23,6 +25,7 @@ function App() {
                     <Route path="/Register" element={<Register/>} />
                     <Route path="/MainPage" element={<MainPage/>} />
                     <Route path="/newProduct" element={<Product/>} />
+                    <Route path="/verifyUsers" element = {<VerifyUsers/>} />
                 </Routes>
             </Router>
         </>
