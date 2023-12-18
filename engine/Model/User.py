@@ -14,6 +14,11 @@ class User:
         self.verified = False
         self.cardNum = ""
 
+    def __str__(self):
+        return f"User(name={self.name}, lastName={self.lastName}, address={self.address}, " \
+               f"city={self.city}, country={self.country}, phoneNum={self.phoneNum}, " \
+               f"email={self.email}, password={self.password}, verified={self.verified}, " \
+               f"cardNum={self.cardNum})"
 
 
 class UserSchema(Schema):
