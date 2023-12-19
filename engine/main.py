@@ -234,6 +234,29 @@ def approveCards():
         db.collection("Bill").document(key).set({}) # pravim racun bez valuta
     return {"message" : "sucessfuly approved new cards"}
 
+@app.route("/api/addFunds", methods=['POST'])
+@jwt_required()
+def add_funds():
+    jwt_token = get_jwt().get("sub")
+    data = request.get_json()
+    funds_amount = float(data.get('amount'))
+    selected_currency = data.get('currency')
+    doc_ref = firestore.client().collection("Bill").document(jwt_token)
+
+    existing_data = doc_ref.get().to_dict()
+
+    if existing_data:
+        if selected_currency in existing_data:
+            existing_value = existing_data[selected_currency].get('value', 0.0)
+            combined_value = existing_value + funds_amount
+            doc_ref.update({f'{selected_currency}.value': combined_value})
+        else:
+            new_map_field_data = {selected_currency: {'value': funds_amount}}
+            doc_ref.update(new_map_field_data)
+    else:
+        new_map_field_data = {selected_currency: {'value': funds_amount}}
+        doc_ref.set(new_map_field_data)
+    return {"message": f"sucessfuly added funds"}, 200
 
 
 if __name__ == "__main__":
