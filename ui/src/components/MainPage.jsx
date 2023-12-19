@@ -12,6 +12,8 @@ export default function MainPage() {
   const [isUserAdmin, setIsUserAdmin] = useState(false);
   const [isUserVerified, setIsUserVerified] = useState(false);
   const [isCardAdded, setIsCardAdded] = useState(false);
+  const [fundsValidationStatus, setFundsValidationStatus] = useState(false);
+  const [currencyValidationStatus, setCurrencyValidationStatus] = useState(false);
 
   const [izValute, setIzValute] = useState('USD');
   const [uValutu, setUValutu] = useState('EUR');
@@ -20,6 +22,8 @@ export default function MainPage() {
   const [konvertovaniIznos, setKonvertovaniIznos] = useState(null);
   const [dostupneValute, setDostupneValute] = useState([]);
   const [sveValute, setSveValute] = useState([]);
+  const [fundsAmount, setFundsAmount] = useState('');
+  const [selectedCurrency, setSelectedCurrency] = useState('');
 
   useEffect(() => {
     const fetchExchangeRate = async () => {
@@ -312,6 +316,52 @@ export default function MainPage() {
       }
   };
 
+  const validateFundsAmount = () => {
+    const isValid = fundsAmount > 0;
+    setFundsValidationStatus(isValid);
+    return isValid;
+  };
+
+  const validateSelectedCurrency = () => {
+    const isValid = selectedCurrency !== '';
+    setCurrencyValidationStatus(isValid);
+    return isValid;
+  };
+
+  const handleAddFunds = async () => {
+     try {
+      const authToken = localStorage.getItem('jwtToken');
+
+      if (validateFundsAmount() && validateSelectedCurrency()) {
+        const response = await fetch(`${API_BASE_URL}/addFunds`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json;charset=UTF-8',
+          },
+          body: JSON.stringify({
+            amount: fundsAmount,
+            currency: selectedCurrency,
+          }),
+        });
+
+        console.warn(response);
+
+        if (response.status === 200) {
+          const data = await response.json();
+          window.location.reload();
+        } else {
+          console.error('Failed to add funds');
+        }
+      } else {
+        console.log('Invalid funds amount or selected currency.');
+      }
+    } catch (error) {
+      console.error('Error during add funds:', error);
+    }
+
+  };
+
   const renderTable = () => {
     return (
       <div className="w-1/2 mr-14">
@@ -451,7 +501,37 @@ export default function MainPage() {
               </ul>
             </>
         )}
-        {(currencyPairs.length === 0) && isCardAdded && (
+        {!isUserAdmin && (
+            <>
+              <input
+                type="number"
+                value={fundsAmount}
+                onChange={(e) => setFundsAmount(e.target.value)}
+                placeholder="Enter amount"
+                className="bg-gray-700 text-white p-2 rounded mr-2" // Added "mr-2" for right margin
+              />
+
+              <select
+                value={selectedCurrency}
+                onChange={(e) => setSelectedCurrency(e.target.value)}
+                className="bg-gray-700 text-white p-2 rounded mr-2" // Added "mr-2" for right margin
+              >
+                <option value="" disabled>Izaberite valutu</option>
+                {sveValute.map((valuta) => (
+                  <option key={valuta} value={valuta}>{valuta}</option>
+                ))}
+              </select>
+
+              {/* Add Funds Button */}
+              <button
+                className="bg-teal-500 text-white px-4 py-2 rounded mt-2"
+                onClick={handleAddFunds}
+              >
+                Add Funds
+              </button>
+            </>
+        )}
+        {(currencyPairs.length === 0) && !isUserVerified && (
             <><p>An admin needs to approve your billing info.</p>
             </>
         )}
