@@ -198,7 +198,6 @@ def addConverted():
     return {"message": "Converted succesfully"}, 200
 
 
-
 @app.route("/api/addNewCreditCard", methods=['POST'])
 @jwt_required()
 def add_new_card():
@@ -209,8 +208,9 @@ def add_new_card():
     newCard = CreditCardSchema().load(request.get_json())
     db.collection("CreditCards").document(newCard.card_number).set(newCard.__dict__)
     user.update({"cardNum": newCard.card_number})
-    user.update({"verified" : True})
+    user.update({"verified": True})
     return {"message": f"sucessfuly added new card"}, 200
+
 
 @app.route("/api/getNotVerifiedUsers",methods = ["GET"])
 @jwt_required()
@@ -227,7 +227,6 @@ def getNotVerifiedUsers():
         .where("__name__", "!=", admin)  #sem admina koji to odobrava
     )
 
-
     users = users_query.stream()
 
     users_data = [
@@ -237,7 +236,7 @@ def getNotVerifiedUsers():
         }
         for user in users
     ]
-    #mora ovako zato sto nece obrisati sve ne diraj kod spreman sam da ubijem za ovo
+    # mora ovako zato sto nece obrisati sve ne diraj kod spreman sam da ubijem za ovo
     filtered_users_data = [
         user_data for user_data in users_data
         if not db.collection("Bill").document(user_data['id']).get().exists
@@ -268,6 +267,7 @@ def approveCards():
         currentCard.update({"admin_approve": True}) #verifikuje je
         db.collection("Bill").document(key).set({}) # pravim racun bez valuta
     return {"message" : "sucessfuly approved new cards"}
+
 
 @app.route("/api/addFunds", methods=['POST'])
 @jwt_required()
