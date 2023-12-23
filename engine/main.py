@@ -75,6 +75,30 @@ def get_user():
         return jsonify({"user_data": user_data}), 200
     return jsonify({"message": "User not found"}), 404
 
+
+@app.route('/api/user', methods=['PUT'])
+@jwt_required()
+def update_user():
+    user_id = get_jwt().get("sub")
+    user = UserSchema().load(request.get_json())
+    user_in_db_ref = db.collection("Users").document(user_id)
+    user_in_db = user_in_db_ref.get()
+    if not user_in_db.exists:
+        return jsonify({"message": "user id from token doesnt exist"}), 400
+    if user_in_db.to_dict()["email"] != user.email:
+        if is_email_taken(user.email):
+            return jsonify({"message": f"Email {user.email} is already taken"}), 403
+    user_in_db_ref.update({"name": user.name,
+                    "lastName": user.lastName,
+                    "email": user.email,
+                    "password": hash_pass(user.password),
+                    "address": user.address,
+                    "city": user.city,
+                    "phoneNum": user.phoneNum,
+                    "country": user.country})
+    return jsonify({"message": "User updated successfully"}), 204
+
+
 def is_email_taken(email):
     result = db.collection("Users").where("email", "==", email).get()
     return bool(result)
@@ -93,6 +117,7 @@ def get_products():
             data[proizvod.id] = proizvod.to_dict()
         return jsonify(data)
     return {"message": "User not found"}, 400
+
 
 @app.route("/api/getUserInfo", methods=['GET'])
 @jwt_required()

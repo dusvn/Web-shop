@@ -221,7 +221,8 @@ export default function MainPage() {
       setLastName(user_data["lastName"]);
       setAddress(user_data["address"]);
       setEmail(user_data["email"]);
-      setPassword(user_data["password"]);
+      setPassword("");
+      setConfirmPassword("");
       setCountry(user_data["country"]);
       setCity(user_data["city"]);
       setPhoneNum(user_data["phoneNum"]);
@@ -297,6 +298,46 @@ export default function MainPage() {
       });
   };
 
+  const handleProfileEditSubmit = async () => {
+      if (nameError !== '' || lastNameError !== '' || addressError !== '' || cityError !== '' || countryError !== '' ||
+          emailError !== '' || phoneNumError !== '' || passwordError !== '' || confirmPasswordError !== '') {
+          return; // GRESKA, treba dodati obradu greske
+      }
+      const user_data = {
+            "name" : name,
+            "lastName": lastName,
+            "address": address,
+            "city": city,
+            "country": country,
+            "phoneNum": phoneNum,
+            "email": email,
+            "password": password
+        };
+      const authToken = localStorage.getItem('jwtToken');
+      try {
+          const response = await fetch(`${API_BASE_URL}/user`, {
+              method: 'PUT',
+              headers: {
+                  'Content-Type': 'application/json;charset=UTF-8',
+                  'Authorization': `Bearer ${authToken}`
+              },
+              body: JSON.stringify(user_data)
+          });
+          if (response.status === 204) {
+              console.log("update successful");
+              setShowProfileEdit(false);
+          } else if (response.status === 403) {
+              // IMEJL POSTOJI
+          } else if (response.status === 400) {
+              // Neka druga greska
+          } else {
+              console.error(response);
+          }
+      } catch (error){
+          console.error(error);
+      }
+  };
+
   const handleSubmit = async (e) => {
     const selectedPairs = Object.entries(selectedValues).filter(([productId, value]) => value !== 0);
     const authToken = localStorage.getItem('jwtToken');
@@ -360,7 +401,7 @@ export default function MainPage() {
 
   const renderProfileEdit = () => {
     return(
-        <div className="w-1/2 mr-14">
+        <div>
           <div className='flex flex-col text-gray-400 py-2'>
             <label>Ime</label>
             <input
@@ -478,13 +519,16 @@ export default function MainPage() {
             />
             {confirmPasswordError && <p className="text-red-500 text-sm">{confirmPasswordError}</p>}
           </div>
+            <button className="bg-teal-500 text-white px-4 py-2 rounded" onClick={handleProfileEditSubmit}>
+                Submit Changes
+            </button>
         </div>
     );
   };
 
   const renderQuantity = () => {
     return (
-      <div className="w-1/2 mr-14">
+      <div>
         <table className="w-full border-collapse border border-gray-700 rounded-lg">
           <thead>
             <tr>
@@ -541,8 +585,8 @@ export default function MainPage() {
 
   const renderProducts = () => {
       return (
-          <div className="w-1/2 mr-14">
-            <table className="w-full border-collapse border border-gray-700 rounded-lg">
+          <div>
+            <table className="w-full border-collapse border border-gray-700 rounded-lg my-8">
               <thead>
                 <tr>
                   <th className="bg-gray-800 p-1 border-r border-gray-700">
@@ -587,10 +631,11 @@ export default function MainPage() {
         </button>
       </header>
 
-
-
-      <div className="flex">
-      <div className="my-2 p-4 bg-gray-800 rounded-lg mr-4">
+      <div className="flex justify-between">
+        <div className="w-1/4 ml-8">
+            <br/>
+            <div>
+      <div className="my-2 p-4 bg-gray-800 rounded-lg">
         <h2 className="text-2xl mb-4 text-teal-500">Balance</h2>
         {!isUserVerified && (
             <>
@@ -637,7 +682,7 @@ export default function MainPage() {
         </div>
         <div>
           <label className="text-white">Iznos:</label>
-          <input type="number" value={iznos} onChange={(e) => setIznos(e.target.value)} className="bg-gray-700 text-white p-2 rounded" />
+          <input type="number" value={iznos} onChange={(e) => setIznos(e.target.value)} className="w-11/12 bg-gray-700 text-white p-2 rounded" />
         </div>
       </div>
         <div className="mt-4">
@@ -651,10 +696,6 @@ export default function MainPage() {
       </div>
     </div>}
     </div>
-
-
-      <div className="flex justify-between">
-        <div className="w-1/4 ml-8">
           <br />
           {!isUserAdmin && (
               <>
@@ -684,16 +725,14 @@ export default function MainPage() {
           )}
           <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full" onClick={handleViewProducts}>View products</button>
         </div>
-          {showProfileEdit ? renderProfileEdit(): (
-              <div>
-              </div>
-          )}
+          <div className="w-3/4 mx-20 my-2">
+            {showProfileEdit ? renderProfileEdit(): ("")}
 
-        {showQuantity ? renderQuantity() : (
-            showProducts ? renderProducts() : ("")
-            )
-        }
-
+            {showQuantity ? renderQuantity() : (
+                showProducts ? renderProducts() : ("")
+                )
+            }
+        </div>
       </div>
     </div>
   );
