@@ -18,8 +18,7 @@ import requests
 app = Flask(__name__)
 CORS(app, origins="*", methods=["GET", "POST", "PUT", "OPTIONS"])
 
-app.config[
-    "JWT_SECRET_KEY"] = "tajniKljuc"  # f"{secrets.SystemRandom().getrandbits(128)}"  # svaki put kad se resetuje app imacemo drugi
+app.config["JWT_SECRET_KEY"] = "tajniKljuc"  # f"{secrets.SystemRandom().getrandbits(128)}"  # svaki put kad se resetuje app imacemo drugi
 jwt = JWTManager(app)
 
 
@@ -67,6 +66,41 @@ def login_user():
     return {"message": "Invalid credentials"}, 400
 
 
+@app.route('/api/user', methods=['GET'])
+@jwt_required()
+def get_user():
+    user_id = get_jwt().get("sub")
+    user_data = db.collection("Users").document(user_id).get()
+    if user_data.exists:
+        user_data = user_data.to_dict()
+        user_data["password"] = ""
+        return jsonify({"user_data": user_data}), 200
+    return jsonify({"message": "User not found"}), 404
+
+
+@app.route('/api/user', methods=['PUT'])
+@jwt_required()
+def update_user():
+    user_id = get_jwt().get("sub")
+    user = UserSchema().load(request.get_json())
+    user_in_db_ref = db.collection("Users").document(user_id)
+    user_in_db = user_in_db_ref.get()
+    if not user_in_db.exists:
+        return jsonify({"message": "user id from token doesnt exist"}), 400
+    if user_in_db.to_dict()["email"] != user.email:
+        if is_email_taken(user.email):
+            return jsonify({"message": f"Email {user.email} is already taken"}), 403
+    user_in_db_ref.update({"name": user.name,
+                    "lastName": user.lastName,
+                    "email": user.email,
+                    "password": hash_pass(user.password),
+                    "address": user.address,
+                    "city": user.city,
+                    "phoneNum": user.phoneNum,
+                    "country": user.country})
+    return jsonify({"message": "User updated successfully"}), 204
+
+
 def is_email_taken(email):
     result = db.collection("Users").where("email", "==", email).get()
     return bool(result)
@@ -84,6 +118,7 @@ def get_products():
         for proizvod in proizvodi:
             data[proizvod.id] = proizvod.to_dict()
         return jsonify(data)
+    return {"message": "User not found"}, 400
 
 
 @app.route("/api/getUserInfo", methods=['GET'])
