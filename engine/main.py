@@ -16,8 +16,7 @@ import requests
 app = Flask(__name__)
 CORS(app, origins="*", methods=["GET", "POST", "PUT", "OPTIONS"])
 
-app.config[
-    "JWT_SECRET_KEY"] = "tajniKljuc"  # f"{secrets.SystemRandom().getrandbits(128)}"  # svaki put kad se resetuje app imacemo drugi
+app.config["JWT_SECRET_KEY"] = "tajniKljuc"  # f"{secrets.SystemRandom().getrandbits(128)}"  # svaki put kad se resetuje app imacemo drugi
 jwt = JWTManager(app)
 
 
@@ -65,6 +64,17 @@ def login_user():
     return {"message": "Invalid credentials"}, 400
 
 
+@app.route('/api/user', methods=['GET'])
+@jwt_required()
+def get_user():
+    user_id = get_jwt().get("sub")
+    user_data = db.collection("Users").document(user_id).get()
+    if user_data.exists:
+        user_data = user_data.to_dict()
+        user_data["password"] = ""
+        return jsonify({"user_data": user_data}), 200
+    return jsonify({"message": "User not found"}), 404
+
 def is_email_taken(email):
     result = db.collection("Users").where("email", "==", email).get()
     return bool(result)
@@ -82,7 +92,7 @@ def get_products():
         for proizvod in proizvodi:
             data[proizvod.id] = proizvod.to_dict()
         return jsonify(data)
-
+    return {"message": "User not found"}, 400
 
 @app.route("/api/getUserInfo", methods=['GET'])
 @jwt_required()
