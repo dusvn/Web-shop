@@ -26,6 +26,7 @@ export default function MainPage() {
   const [sveValute, setSveValute] = useState([]);
   const [fundsAmount, setFundsAmount] = useState('');
   const [selectedCurrency, setSelectedCurrency] = useState('');
+  const [prvi, setPrvi] = useState(true);
 
   const [name, setName] = useState('');
   const [nameError, setNameError] = useState('');
@@ -152,6 +153,11 @@ export default function MainPage() {
       const currencyPairs = Object.entries(userData.bill)
         .map(([currency, { value }]) => ({ currency, value }));
       setCurrencyPairs(currencyPairs);
+
+      if(prvi){
+          setIzValute(currencyPairs[0].currency);
+          setPrvi(false);
+      }
 
       if(izValute !== ''){
         const response = await fetch(`https://open.er-api.com/v6/latest/${izValute}`);
