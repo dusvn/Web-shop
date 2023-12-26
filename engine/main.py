@@ -9,6 +9,7 @@ from Model.User import *
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt
 from Model.Product import *
 from Model.CreditCard import *
+from Model.Order import *
 
 import secrets
 import hashlib
@@ -18,8 +19,7 @@ import requests
 app = Flask(__name__)
 CORS(app, origins="*", methods=["GET", "POST", "PUT", "OPTIONS"])
 
-app.config[
-    "JWT_SECRET_KEY"] = "tajniKljuc"  # f"{secrets.SystemRandom().getrandbits(128)}"  # svaki put kad se resetuje app imacemo drugi
+app.config["JWT_SECRET_KEY"] = "tajniKljuc"  # f"{secrets.SystemRandom().getrandbits(128)}"  # svaki put kad se resetuje app imacemo drugi
 jwt = JWTManager(app)
 
 
@@ -67,6 +67,41 @@ def login_user():
     return {"message": "Invalid credentials"}, 400
 
 
+@app.route('/api/user', methods=['GET'])
+@jwt_required()
+def get_user():
+    user_id = get_jwt().get("sub")
+    user_data = db.collection("Users").document(user_id).get()
+    if user_data.exists:
+        user_data = user_data.to_dict()
+        user_data["password"] = ""
+        return jsonify({"user_data": user_data}), 200
+    return jsonify({"message": "User not found"}), 404
+
+
+@app.route('/api/user', methods=['PUT'])
+@jwt_required()
+def update_user():
+    user_id = get_jwt().get("sub")
+    user = UserSchema().load(request.get_json())
+    user_in_db_ref = db.collection("Users").document(user_id)
+    user_in_db = user_in_db_ref.get()
+    if not user_in_db.exists:
+        return jsonify({"message": "user id from token doesnt exist"}), 400
+    if user_in_db.to_dict()["email"] != user.email:
+        if is_email_taken(user.email):
+            return jsonify({"message": f"Email {user.email} is already taken"}), 403
+    user_in_db_ref.update({"name": user.name,
+                    "lastName": user.lastName,
+                    "email": user.email,
+                    "password": hash_pass(user.password),
+                    "address": user.address,
+                    "city": user.city,
+                    "phoneNum": user.phoneNum,
+                    "country": user.country})
+    return jsonify({"message": "User updated successfully"}), 204
+
+
 def is_email_taken(email):
     result = db.collection("Users").where("email", "==", email).get()
     return bool(result)
@@ -84,6 +119,7 @@ def get_products():
         for proizvod in proizvodi:
             data[proizvod.id] = proizvod.to_dict()
         return jsonify(data)
+    return {"message": "User not found"}, 400
 
 
 @app.route("/api/getUserInfo", methods=['GET'])
@@ -163,7 +199,6 @@ def addConverted():
     return {"message": "Converted succesfully"}, 200
 
 
-
 @app.route("/api/addNewCreditCard", methods=['POST'])
 @jwt_required()
 def add_new_card():
@@ -174,8 +209,9 @@ def add_new_card():
     newCard = CreditCardSchema().load(request.get_json())
     db.collection("CreditCards").document(newCard.card_number).set(newCard.__dict__)
     user.update({"cardNum": newCard.card_number})
-    user.update({"verified" : True})
+    user.update({"verified": True})
     return {"message": f"sucessfuly added new card"}, 200
+
 
 @app.route("/api/getNotVerifiedUsers",methods = ["GET"])
 @jwt_required()
@@ -192,7 +228,6 @@ def getNotVerifiedUsers():
         .where("__name__", "!=", admin)  #sem admina koji to odobrava
     )
 
-
     users = users_query.stream()
 
     users_data = [
@@ -202,7 +237,7 @@ def getNotVerifiedUsers():
         }
         for user in users
     ]
-    #mora ovako zato sto nece obrisati sve ne diraj kod spreman sam da ubijem za ovo
+    # mora ovako zato sto nece obrisati sve ne diraj kod spreman sam da ubijem za ovo
     filtered_users_data = [
         user_data for user_data in users_data
         if not db.collection("Bill").document(user_data['id']).get().exists
@@ -234,6 +269,7 @@ def approveCards():
         db.collection("Bill").document(key).set({}) # pravim racun bez valuta
     return {"message" : "sucessfuly approved new cards"}
 
+
 @app.route("/api/addFunds", methods=['POST'])
 @jwt_required()
 def add_funds():
@@ -258,6 +294,30 @@ def add_funds():
         doc_ref.set(new_map_field_data)
     return {"message": f"sucessfuly added funds"}, 200
 
+@app.route("/api/addNewOrder", methods=['POST'])
+@jwt_required()
+def add_new_order():
+    jwt_token = get_jwt().get("sub")
+    data = request.get_json()
+    data['buyerId'] = jwt_token
+    currency = data.get('currency')
+    price = float(data.get('price'))
+    newOrder = OrderSchema().load(data)
+    new_order_dict = OrderSchema().dump(newOrder)
+    bill = firestore.client().collection("Bill").document(jwt_token)
+    orders_collection = firestore.client().collection("Orders")
+
+    orders_collection.add(new_order_dict)
+
+    bill_data = bill.get().to_dict()
+
+    if currency in bill_data:
+        existing_value = bill_data[currency].get('value', 0.0)
+        new_value = existing_value - price
+        bill.update({f'{currency}.value': new_value})
+        return jsonify({'message': 'Order added successfully.'}), 200
+    else:
+        return jsonify({'error': 'Currency not found in bills.'}), 404
 
 if __name__ == "__main__":
     app.run()
