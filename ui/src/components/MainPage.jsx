@@ -16,6 +16,7 @@ export default function MainPage() {
   const [isCardAdded, setIsCardAdded] = useState(false);
   const [fundsValidationStatus, setFundsValidationStatus] = useState(false);
   const [currencyValidationStatus, setCurrencyValidationStatus] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const [izValute, setIzValute] = useState('USD');
   const [uValutu, setUValutu] = useState('EUR');
@@ -26,6 +27,7 @@ export default function MainPage() {
   const [sveValute, setSveValute] = useState([]);
   const [fundsAmount, setFundsAmount] = useState('');
   const [selectedCurrency, setSelectedCurrency] = useState('');
+  const [prvi, setPrvi] = useState(true);
 
   const [name, setName] = useState('');
   const [nameError, setNameError] = useState('');
@@ -135,31 +137,16 @@ export default function MainPage() {
   useEffect(() => {
     const fetchExchangeRate = async () => {
       try {
+      if(prvi && currencyPairs[0] !== undefined){
+          setIzValute(currencyPairs[0].currency);
+          setPrvi(false);
+      }
 
-        const authToken = localStorage.getItem('jwtToken');
-      console.log(`Ovo je poslati token ${authToken}`);
-      const response1 = await fetch(`${API_BASE_URL}/getUserInfo`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      const userData = await response1.json();
-
-      const { name: userName } = userData;
-
-      const currencyPairs = Object.entries(userData.bill)
-        .map(([currency, { value }]) => ({ currency, value }));
-      setCurrencyPairs(currencyPairs);
-
-      if(izValute !== ''){
+      if(izValute !== '' && currencyPairs[0] !== undefined){
         const response = await fetch(`https://open.er-api.com/v6/latest/${izValute}`);
         const data = await response.json();
         const exchangeRate = data.rates[uValutu];
         setKurs(exchangeRate);
-
-        //const availableCurrencies = Object.keys(data.rates);
 
         const availableCurrencies = currencyPairs.map(({ currency }) => currency);
         setDostupneValute(availableCurrencies);
@@ -170,8 +157,8 @@ export default function MainPage() {
       }
     };
 
-    fetchExchangeRate();
-  }, [izValute, uValutu]);
+           fetchExchangeRate();
+  }, [izValute, uValutu, currencyPairs]);
 
   useEffect(() => {
     if (kurs !== null) {
@@ -278,7 +265,7 @@ export default function MainPage() {
             setCurrencyPairs(currencyPairs);
       }
 
-      console.log(currencyPairs);
+
       setUserName(userName);
       setIsUserAdmin(isUserAdmin);
       setIsUserVerified(isUserVerified);
@@ -405,8 +392,10 @@ export default function MainPage() {
   };
 
   useEffect(() => {
+      setLoading(true);
     fetchUserInformation();
     fetchProducts();
+    setLoading(false);
   }, []);
 
   const [formData, setFormData] = useState({
@@ -536,6 +525,7 @@ export default function MainPage() {
   };
   const renderProfileEdit = () => {
     return(
+
         <div>
           <div className='flex flex-col text-gray-400 py-2'>
             <label>Ime</label>
@@ -658,6 +648,7 @@ export default function MainPage() {
                 Submit Changes
             </button>
         </div>
+
     );
   };
 
@@ -758,6 +749,8 @@ export default function MainPage() {
   };
 
   return (
+      <>
+        {!loading &&
     <div className="flex flex-col h-screen bg-gray-900 text-white">
       <header className="bg-gray-700 p-4 flex justify-between items-center">
         <div className="text-4xl italic font-light">Hello {userName}</div>
@@ -950,6 +943,8 @@ export default function MainPage() {
         </div>
       </div>
     </div>
+            }
+      </>
   );
 
 }
