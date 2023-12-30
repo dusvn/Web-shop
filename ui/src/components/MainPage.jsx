@@ -847,68 +847,78 @@ export default function MainPage() {
 
   const renderUserProducts = () => {
       return (
-            <div>
-              <table className="w-full border-collapse border border-gray-700 rounded-lg my-8">
-                <thead>
-                  <tr>
-                    <th className="bg-gray-800 p-1 border-r border-gray-700">
-                      <h3 className="text-sm font-semibold mb-1">Name</h3>
-                    </th>
-                    <th className="bg-gray-800 p-1 border-r border-gray-700">
-                      <h3 className="text-sm font-semibold mb-1">Quantity</h3>
-                    </th>
-                    <th className="bg-gray-800 p-1 border-r border-gray-700">
-                      <h3 className="text-sm font-semibold mb-1">Price</h3>
-                    </th>
-                    <th className="bg-gray-800 p-1">
-                      <h3 className="text-sm font-semibold mb-1">Currency</h3>
-                    </th>
-                    <th className="bg-gray-800 p-1">
-                      <h3 className="text-sm font-semibold mb-1">Order</h3>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.keys(products).map((productId, index) => {
-                      const product = products[productId];
-                      const priceId = `price_${productId}`;
-                      const currencySelectId = `currencySelect_${productId}`;
-                      const displayedCurrency = currencyValues[index] || product.currency;
-                      const displayedPrice = displayedPrices[productId] || product.price;
-                      return (
-                        <tr key={productId} >
-                          <td className="border p-1">{product.name}</td>
-                          <td className="border p-1">{product.quantity}</td>
-                          <td className="border p-1" id={priceId}>{displayedPrice}</td>
-                          <td className="border p-1">
-                              <select id={currencySelectId}
-                                className="bg-gray-700 text-white p-2 rounded"
-                                value={displayedCurrency}
-                                onChange={(e) => handleCurrencyChange(index, productId, product.price, product.currency, e.target.value)}
-                              >
-                                {sveValute.map((valuta) => (
-                                  <option key={valuta} value={valuta}>
-                                    {valuta}
-                                  </option>
-                                ))}
-                              </select>
-                          </td>
-                          <td className="border p-1 flex items-center justify-center">
-                            <button
-                              className="bg-teal-500 text-white px-4 py-2 rounded hover:bg-teal-600"
-                              onClick={() => handleOrderClick(productId, displayedPrice, displayedCurrency)}
-                            >
-                              Order
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                  })}
-                </tbody>
-              </table>
-            </div>
+        <div>
+          <table className="w-full border-collapse border border-gray-700 rounded-lg my-8">
+            <thead>
+              <tr>
+                <th className="bg-gray-800 p-1 border-r border-gray-700">
+                  <h3 className="text-sm font-semibold mb-1">Name</h3>
+                </th>
+                <th className="bg-gray-800 p-1 border-r border-gray-700">
+                  <h3 className="text-sm font-semibold mb-1">Quantity</h3>
+                </th>
+                <th className="bg-gray-800 p-1 border-r border-gray-700">
+                  <h3 className="text-sm font-semibold mb-1">Price</h3>
+                </th>
+                <th className="bg-gray-800 p-1 border-r border-gray-700">
+                  <h3 className="text-sm font-semibold mb-1">Currency</h3>
+                </th>
+                <th className="bg-gray-800 p-1">
+                  <h3 className="text-sm font-semibold mb-1">Order</h3>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.keys(products).map((productId, index) => {
+                const product = products[productId];
+                if (product.quantity > 0) {
+                  const priceId = `price_${productId}`;
+                  const currencySelectId = `currencySelect_${productId}`;
+                  const displayedCurrency = currencyValues[index] || product.currency;
+                  const displayedPrice = displayedPrices[productId] || product.price;
+
+                  return (
+                    <tr key={productId}>
+                      <td className="border p-1">{product.name}</td>
+                      <td className="border p-1">{product.quantity}</td>
+                      <td className="border p-1" id={priceId}>
+                        {displayedPrice}
+                      </td>
+                      <td className="border p-1">
+                        <select
+                          id={currencySelectId}
+                          className="bg-gray-700 text-white p-2 rounded block mx-auto"
+                          value={displayedCurrency}
+                          onChange={(e) =>
+                            handleCurrencyChange(index, productId, product.price, product.currency, e.target.value)
+                          }
+                        >
+                          {sveValute.map((valuta) => (
+                            <option key={valuta} value={valuta}>
+                              {valuta}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="border p-1 flex items-center justify-center">
+                        <button
+                          className="bg-teal-500 text-white px-4 py-2 rounded hover:bg-teal-600"
+                          onClick={() => handleOrderClick(productId, displayedPrice, displayedCurrency)}
+                        >
+                          Order
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                } else {
+                  return null;
+                }
+              })}
+            </tbody>
+          </table>
+        </div>
       );
-  };
+    };
 
   return (
     <div className="flex flex-col h-screen bg-gray-900 text-white">
@@ -992,7 +1002,7 @@ export default function MainPage() {
                   </ul>
                 </>
               )}
-              {!isUserAdmin && (
+              {!isUserAdmin && isCardAdded && isUserVerified && (
                 <>
                   <input
                     type="number"
@@ -1022,7 +1032,7 @@ export default function MainPage() {
                   </button>
                 </>
               )}
-              {(currencyPairs.length === 0) && !isUserVerified && (
+              {(currencyPairs.length === 0) && !isUserVerified && isCardAdded && (
                 <><p>An admin needs to approve your billing info.</p>
                 </>
               )}
