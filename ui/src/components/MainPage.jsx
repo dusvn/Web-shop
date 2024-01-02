@@ -1092,10 +1092,10 @@ export default function MainPage() {
         <div className="w-3/4 mx-20 my-2">
           {showProfileEdit ? renderProfileEdit(): ("")}
           {showQuantity ? renderQuantity() : (
-              showProducts ? renderProducts() : ("")
+              showProducts && (!isUserVerified || isUserAdmin) ? renderProducts() : ("")
               )
           }
-              showProducts && (!isUserVerified || isUserAdmin) ? renderProducts() : ("")
+
               )
           {(isUserVerified && !isUserAdmin) ? renderUserProducts(): ("")}
         </div>
