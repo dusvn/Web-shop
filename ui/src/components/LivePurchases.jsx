@@ -3,38 +3,40 @@ import { API_BASE_URL } from '../index';
 import { Link } from 'react-router-dom';
 
 const LivePurchases = () => {
-
   const [purchases, setPurchases] = useState([]);
 
+  const fetchData = async () => {
+    try {
+      const authToken = localStorage.getItem('jwtToken');
+      const response = await fetch(`${API_BASE_URL}/getLivePurchases`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPurchases(data.orders); // Set the state with the received orders
+      } else {
+        console.error('Error fetching information:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Error fetching information:', error);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const authToken = localStorage.getItem('jwtToken');
-        const response = await fetch(`${API_BASE_URL}/getLivePurchases`, {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-            'Content-Type': 'application/json',
-          },
-        });
-  
-        if (response.ok) {
-          const data = await response.json();
-          setPurchases(data.orders); // Set the state with the received orders
-        } else {
-          console.error('Error fetching information:', response.statusText);
-        }
-      } catch (error) {
-        console.error('Error fetching information:', error);
-      }
-    };
-  
     fetchData();
-  }, []);
+    const intervalId = setInterval(() => {
+      fetchData();
+    }, 60000);
+
+    return () => clearInterval(intervalId);
+  }, []); 
 
 
-  
   return (
     <div className="bg-gray-900 min-h-screen flex flex-col items-center justify-center">
       <div className="bg-gray-800 p-6 rounded-lg w-full">
@@ -69,7 +71,6 @@ const LivePurchases = () => {
       </Link>
     </div>
   );
-  
 };
 
 export default LivePurchases;
