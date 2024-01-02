@@ -5,6 +5,8 @@ import Register from "./components/Register";
 import MainPage from "./components/MainPage";
 import Product from "./components/Product";
 import VerifyUsers from "./components/Verify";
+import HistoryPurchases from "./components/HistoryPurchases";
+import LivePurchases from "./components/LivePurchases";
 
 import {
     BrowserRouter as Router,
@@ -12,6 +14,7 @@ import {
     Route,
     Navigate,
 } from "react-router-dom";
+
 
 
 
@@ -26,6 +29,8 @@ function App() {
                     <Route path="/MainPage" element={<MainPage/>} />
                     <Route path="/newProduct" element={<Product/>} />
                     <Route path="/verifyUsers" element = {<VerifyUsers/>} />
+                    <Route path="/HistoryPurchases" element = {<HistoryPurchases/>} />
+                    <Route path="/LivePurchases" element = {<LivePurchases/>} /> 
                 </Routes>
             </Router>
         </>

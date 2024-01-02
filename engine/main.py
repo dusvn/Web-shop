@@ -331,6 +331,62 @@ def add_new_order():
         return jsonify({'error': 'Currency not found in bills.'}), 404
 
 
+
+@app.route("/api/getPurchasesForUser",methods=['GET'])
+@jwt_required()
+def findPurchases():
+    jwt_token = get_jwt().get("sub")
+    orders_query = (
+        db.collection("Orders")
+        .where("completed", "==", True)
+        .where("buyerId", "==", jwt_token)
+    )
+    orders_data = [
+        {
+            "currency": order.get("currency"),
+            "dateTime": order.get("dateTime"),
+            "price": order.get("price")
+        }
+        for order in orders_query.stream()
+    ]
+    if jwt_token not in admin_ids:
+        return jsonify({"orders": orders_data}), 200
+    else:
+        return {"message": "This function cannont be executet by regular user"}, 400
+
+@app.route("/api/getLivePurchases", methods=['GET'])
+@jwt_required()
+def livePurchases():
+    jwt_token = get_jwt().get("sub")
+
+    if jwt_token not in admin_ids:
+        return {"message": "This function cannot be executed by admin"}, 400
+
+    orders_query = (
+        db.collection("Orders")
+        .where("completed", "==", True)
+    )
+    orders_data = []
+
+    for order in orders_query.stream():
+        buyer_id = order.get("buyerId")
+        if buyer_id:
+            buyer_info = db.collection("Users").document(buyer_id).get().to_dict()
+
+            orders_data.append({
+                "currency": order.get("currency"),
+                "dateTime": order.get("dateTime"),
+                "price": order.get("price"),
+                "buyerId": buyer_id,
+                "name": buyer_info.get("name"),
+                "lastName": buyer_info.get("lastName"),
+                "email": buyer_info.get("email"),
+            })
+
+    return jsonify({"orders": orders_data}), 200
+
+
+
 def order_processing():
     try:
         while True:
