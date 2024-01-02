@@ -1096,7 +1096,7 @@ export default function MainPage() {
               )
           }
 
-              )
+              
           {(isUserVerified && !isUserAdmin) ? renderUserProducts(): ("")}
         </div>
       </div>
