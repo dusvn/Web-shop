@@ -122,6 +122,10 @@ export default function Register() {
 
     const handleRegistration = async (e) => {
         e.preventDefault();
+        if (nameError !== '' || lastNameError !== '' || addressError !== '' || cityError !== '' || countryError !== '' ||
+          emailError !== '' || phoneNumError !== '' || passwordError !== '' || confirmPasswordError !== '') {
+          return; // GRESKA, treba dodati obradu greske
+      }
         const userData = {
             "name" : name,
             "lastName" :lastName,

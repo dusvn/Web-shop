@@ -1,4 +1,5 @@
 # from functools import wraps
+from collections import defaultdict
 
 from flask import Flask, jsonify, request, json
 from flask_cors import CORS
@@ -9,17 +10,20 @@ from Model.User import *
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt
 from Model.Product import *
 from Model.CreditCard import *
+from Model.Order import *
+from multiprocessing import Process
 
 import secrets
 import hashlib
 from google.cloud.firestore_v1.base_query import FieldFilter  # nije potrebno ali neka stoji jer moze da zatreba taj fieldFilter pri queryjovanju iz baze
 import requests
+import time
+import signal
 
 app = Flask(__name__)
 CORS(app, origins="*", methods=["GET", "POST", "PUT", "OPTIONS"])
 
-app.config[
-    "JWT_SECRET_KEY"] = "tajniKljuc"  # f"{secrets.SystemRandom().getrandbits(128)}"  # svaki put kad se resetuje app imacemo drugi
+app.config["JWT_SECRET_KEY"] = "tajniKljuc"  # f"{secrets.SystemRandom().getrandbits(128)}"  # svaki put kad se resetuje app imacemo drugi
 jwt = JWTManager(app)
 
 
@@ -67,6 +71,41 @@ def login_user():
     return {"message": "Invalid credentials"}, 400
 
 
+@app.route('/api/user', methods=['GET'])
+@jwt_required()
+def get_user():
+    user_id = get_jwt().get("sub")
+    user_data = db.collection("Users").document(user_id).get()
+    if user_data.exists:
+        user_data = user_data.to_dict()
+        user_data["password"] = ""
+        return jsonify({"user_data": user_data}), 200
+    return jsonify({"message": "User not found"}), 404
+
+
+@app.route('/api/user', methods=['PUT'])
+@jwt_required()
+def update_user():
+    user_id = get_jwt().get("sub")
+    user = UserSchema().load(request.get_json())
+    user_in_db_ref = db.collection("Users").document(user_id)
+    user_in_db = user_in_db_ref.get()
+    if not user_in_db.exists:
+        return jsonify({"message": "user id from token doesnt exist"}), 400
+    if user_in_db.to_dict()["email"] != user.email:
+        if is_email_taken(user.email):
+            return jsonify({"message": f"Email {user.email} is already taken"}), 403
+    user_in_db_ref.update({"name": user.name,
+                    "lastName": user.lastName,
+                    "email": user.email,
+                    "password": hash_pass(user.password),
+                    "address": user.address,
+                    "city": user.city,
+                    "phoneNum": user.phoneNum,
+                    "country": user.country})
+    return jsonify({"message": "User updated successfully"}), 204
+
+
 def is_email_taken(email):
     result = db.collection("Users").where("email", "==", email).get()
     return bool(result)
@@ -84,6 +123,7 @@ def get_products():
         for proizvod in proizvodi:
             data[proizvod.id] = proizvod.to_dict()
         return jsonify(data)
+    return {"message": "User not found"}, 400
 
 
 @app.route("/api/getUserInfo", methods=['GET'])
@@ -163,7 +203,6 @@ def addConverted():
     return {"message": "Converted succesfully"}, 200
 
 
-
 @app.route("/api/addNewCreditCard", methods=['POST'])
 @jwt_required()
 def add_new_card():
@@ -174,8 +213,9 @@ def add_new_card():
     newCard = CreditCardSchema().load(request.get_json())
     db.collection("CreditCards").document(newCard.card_number).set(newCard.__dict__)
     user.update({"cardNum": newCard.card_number})
-    user.update({"verified" : True})
+    user.update({"verified": True})
     return {"message": f"sucessfuly added new card"}, 200
+
 
 @app.route("/api/getNotVerifiedUsers",methods = ["GET"])
 @jwt_required()
@@ -192,7 +232,6 @@ def getNotVerifiedUsers():
         .where("__name__", "!=", admin)  #sem admina koji to odobrava
     )
 
-
     users = users_query.stream()
 
     users_data = [
@@ -202,7 +241,7 @@ def getNotVerifiedUsers():
         }
         for user in users
     ]
-    #mora ovako zato sto nece obrisati sve ne diraj kod spreman sam da ubijem za ovo
+    # mora ovako zato sto nece obrisati sve ne diraj kod spreman sam da ubijem za ovo
     filtered_users_data = [
         user_data for user_data in users_data
         if not db.collection("Bill").document(user_data['id']).get().exists
@@ -235,6 +274,122 @@ def approveCards():
     return {"message" : "sucessfuly approved new cards"}
 
 
+@app.route("/api/addFunds", methods=['POST'])
+@jwt_required()
+def add_funds():
+    jwt_token = get_jwt().get("sub")
+    data = request.get_json()
+    funds_amount = float(data.get('amount'))
+    selected_currency = data.get('currency')
+    doc_ref = firestore.client().collection("Bill").document(jwt_token)
+
+    existing_data = doc_ref.get().to_dict()
+
+    if existing_data:
+        if selected_currency in existing_data:
+            existing_value = existing_data[selected_currency].get('value', 0.0)
+            combined_value = existing_value + funds_amount
+            doc_ref.update({f'{selected_currency}.value': combined_value})
+        else:
+            new_map_field_data = {selected_currency: {'value': funds_amount}}
+            doc_ref.update(new_map_field_data)
+    else:
+        new_map_field_data = {selected_currency: {'value': funds_amount}}
+        doc_ref.set(new_map_field_data)
+    return {"message": f"sucessfuly added funds"}, 200
+
+@app.route("/api/addNewOrder", methods=['POST'])
+@jwt_required()
+def add_new_order():
+    jwt_token = get_jwt().get("sub")
+    data = request.get_json()
+    data['buyerId'] = jwt_token
+    currency = data.get('currency')
+    price = float(data.get('price'))
+    newOrder = OrderSchema().load(data)
+    new_order_dict = OrderSchema().dump(newOrder)
+    bill = firestore.client().collection("Bill").document(jwt_token)
+    orders_collection = firestore.client().collection("Orders")
+
+    orders_collection.add(new_order_dict)
+
+    product_ref = firestore.client().collection("Products").document(data.get('productId'))
+    product_data = product_ref.get().to_dict()
+    current_quantity = product_data.get('quantity', 0)
+    if current_quantity > 0:
+        new_quantity = current_quantity - 1
+        product_ref.update({"quantity": new_quantity})
+
+    bill_data = bill.get().to_dict()
+
+    if currency in bill_data:
+        existing_value = bill_data[currency].get('value', 0.0)
+        new_value = existing_value - price
+        bill.update({f'{currency}.value': new_value})
+        return jsonify({'message': 'Order added successfully.'}), 200
+    else:
+        return jsonify({'error': 'Currency not found in bills.'}), 404
+
+
+def order_processing():
+    try:
+        while True:
+            orders_ref = db.collection("Orders")
+            incomplete_orders = orders_ref.where(filter=FieldFilter("completed", "==", False)).stream()
+
+            # Sve neizvrsene porudzbine grupisati po ID kupca
+            grouped_orders = defaultdict(list)
+            for order in incomplete_orders:
+                order_data = order.to_dict()
+                buyer_id = order_data.get("buyerId")
+                grouped_orders[buyer_id].append(order_data)
+                order_ref = orders_ref.document(order.id)
+                order_ref.update({"completed": True})
+
+            doc_ref = firestore.client().collection("Bill").document(admin_ids[0])
+            for buyer_id, orders in grouped_orders.items():
+                message = "Your order(s) have been completed:\n"
+                buyer_ref = firestore.client().collection("Users").document(buyer_id)
+                buyer_data = buyer_ref.get().to_dict()
+                buyer_email = buyer_data.get("email")
+                for order in orders:
+                    product_ref = firestore.client().collection("Products").document(order.get("productId"))
+                    product_data = product_ref.get().to_dict()
+                    order_time = order.get("dateTime")
+                    product_name = product_data.get("name")
+                    order_price = order.get("price")
+                    order_curr = order.get("currency")
+                    message += f"\n{order_time} Product: {product_name}, for: {order_price} {order_curr}"
+                    # Dodaj pare adminu
+
+                    existing_data = doc_ref.get().to_dict()
+
+                    if existing_data:
+                        if order_curr in existing_data:
+                            existing_value = existing_data[order_curr].get('value', 0.0)
+                            combined_value = existing_value + order_price
+                            doc_ref.update({f'{order_curr}.value': combined_value})
+                        else:
+                            new_map_field_data = {order_curr: {'value': order_price}}
+                            doc_ref.update(new_map_field_data)
+                    else:
+                        new_map_field_data = {order_curr: {'value': order_price}}
+                        doc_ref.set(new_map_field_data)
+
+                message += "\n\nThank you for shopping with us."
+                send_simple_message(buyer_email, "Order(s) update", message)
+
+            time.sleep(60)
+    except KeyboardInterrupt:
+        print("Order processing interrupted. Cleaning up...")
 
 if __name__ == "__main__":
+    order_process = Process(target=order_processing)
+    order_process.daemon = True
+    order_process.start()
+
     app.run()
+
+
+
+
