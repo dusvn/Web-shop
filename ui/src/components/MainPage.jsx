@@ -17,6 +17,8 @@ export default function MainPage() {
   const [fundsValidationStatus, setFundsValidationStatus] = useState(false);
   const [currencyValidationStatus, setCurrencyValidationStatus] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [currencyValues, setCurrencyValues] = useState({});
+  const [displayedPrices, setDisplayedPrices] = useState({});
 
   const [izValute, setIzValute] = useState('USD');
   const [uValutu, setUValutu] = useState('EUR');
@@ -523,9 +525,88 @@ export default function MainPage() {
     }
 
   };
+
+  const handlePlaceOrder = async (productId, price, currency) => {
+    const authToken = localStorage.getItem('jwtToken');
+    const currentDateTime = new Date()
+    const orderData = {
+      productId: productId,
+      buyerId: authToken,
+      currency: currency,
+      price: price,
+        dateTime: currentDateTime.toISOString(),
+        completed: false,
+    };
+    try {
+      console.warn(orderData);
+      const response = await fetch(`${API_BASE_URL}/addNewOrder`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json;charset=UTF-8',
+        },
+        body: JSON.stringify(orderData),
+      });
+
+      console.warn(response);
+
+      if (response.status === 200) {
+        const data = await response.json();
+        window.location.reload();
+
+      } else {
+        console.error("Order can't be added!");
+      }
+    } catch (error) {
+      console.warn(error);
+      console.error('Error during add new order.', error);
+    }
+
+  };
+
+  const handleOrderClick = (productId, price, currency) => {
+    console.log(`Ordering product ID: ${productId}, Price: ${price}, Currency: ${currency}`);
+
+    const currencyPair = currencyPairs.find(pair => pair.currency === currency);
+
+    if (currencyPair && currencyPair.value >= price) {
+        console.log('Order placed successfully!');
+        handlePlaceOrder(productId, price, currency)
+    } else {
+        console.error('Unable to place the order. Invalid currency or insufficient funds.');
+        window.alert('Unable to place the order. Please check the currency or ensure sufficient funds.');
+    }
+  };
+
+  const handleCurrencyChange = async (index, productId, originalPrice, originalCurrency, newCurrency) => {
+      setCurrencyValues((prevCurrencyValues) => ({
+        ...prevCurrencyValues,
+        [index]: newCurrency,
+      }));
+
+      try {
+        const conversionRate = await getConversionRate(originalCurrency, newCurrency);
+        const updatedPrice = (originalPrice * conversionRate).toFixed(2);
+
+        setDisplayedPrices((prevDisplayedPrices) => ({
+          ...prevDisplayedPrices,
+          [productId]: updatedPrice,
+        }));
+      } catch (error) {
+        console.error('Error fetching conversion rate:', error);
+        // Handle error, e.g., set a default value or show an error message
+      }
+    };
+
+  const getConversionRate = async (originalCurrency, newCurrency) => {
+    const response = await fetch(`https://open.er-api.com/v6/latest/${originalCurrency}`);
+    const data = await response.json();
+    const exchangeRate = data.rates[newCurrency];
+    return exchangeRate;
+  };
+
   const renderProfileEdit = () => {
     return(
-
         <div>
           <div className='flex flex-col text-gray-400 py-2'>
             <label>Ime</label>
@@ -648,7 +729,6 @@ export default function MainPage() {
                 Submit Changes
             </button>
         </div>
-
     );
   };
 
@@ -747,10 +827,85 @@ export default function MainPage() {
           </div>
       );
   };
+        
+  const renderUserProducts = () => {
+      return (
+        <div>
+          <table className="w-full border-collapse border border-gray-700 rounded-lg my-8">
+            <thead>
+              <tr>
+                <th className="bg-gray-800 p-1 border-r border-gray-700">
+                  <h3 className="text-sm font-semibold mb-1">Name</h3>
+                </th>
+                <th className="bg-gray-800 p-1 border-r border-gray-700">
+                  <h3 className="text-sm font-semibold mb-1">Quantity</h3>
+                </th>
+                <th className="bg-gray-800 p-1 border-r border-gray-700">
+                  <h3 className="text-sm font-semibold mb-1">Price</h3>
+                </th>
+                <th className="bg-gray-800 p-1 border-r border-gray-700">
+                  <h3 className="text-sm font-semibold mb-1">Currency</h3>
+                </th>
+                <th className="bg-gray-800 p-1">
+                  <h3 className="text-sm font-semibold mb-1">Order</h3>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.keys(products).map((productId, index) => {
+                const product = products[productId];
+                if (product.quantity > 0) {
+                  const priceId = `price_${productId}`;
+                  const currencySelectId = `currencySelect_${productId}`;
+                  const displayedCurrency = currencyValues[index] || product.currency;
+                  const displayedPrice = displayedPrices[productId] || product.price;
+
+                  return (
+                    <tr key={productId}>
+                      <td className="border p-1">{product.name}</td>
+                      <td className="border p-1">{product.quantity}</td>
+                      <td className="border p-1" id={priceId}>
+                        {displayedPrice}
+                      </td>
+                      <td className="border p-1">
+                        <select
+                          id={currencySelectId}
+                          className="bg-gray-700 text-white p-2 rounded block mx-auto"
+                          value={displayedCurrency}
+                          onChange={(e) =>
+                            handleCurrencyChange(index, productId, product.price, product.currency, e.target.value)
+                          }
+                        >
+                          {sveValute.map((valuta) => (
+                            <option key={valuta} value={valuta}>
+                              {valuta}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="border p-1 flex items-center justify-center">
+                        <button
+                          className="bg-teal-500 text-white px-4 py-2 rounded hover:bg-teal-600"
+                          onClick={() => handleOrderClick(productId, displayedPrice, displayedCurrency)}
+                        >
+                          Order
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                } else {
+                  return null;
+                }
+              })}
+            </tbody>
+          </table>
+        </div>
+      );
+    };
 
   return (
-      <>
-        {!loading &&
+    <>
+    {!loading &&
     <div className="flex flex-col h-screen bg-gray-900 text-white">
       <header className="bg-gray-700 p-4 flex justify-between items-center">
         <div className="text-4xl italic font-light">Hello {userName}</div>
@@ -832,7 +987,7 @@ export default function MainPage() {
                   </ul>
                 </>
               )}
-              {!isUserAdmin && (
+              {!isUserAdmin && isCardAdded && isUserVerified && (
                 <>
                   <input
                     type="number"
@@ -862,7 +1017,7 @@ export default function MainPage() {
                   </button>
                 </>
               )}
-              {(currencyPairs.length === 0) && !isUserVerified && (
+              {(currencyPairs.length === 0) && !isUserVerified && isCardAdded && (
                 <><p>An admin needs to approve your billing info.</p>
                 </>
               )}
@@ -940,6 +1095,9 @@ export default function MainPage() {
               showProducts ? renderProducts() : ("")
               )
           }
+              showProducts && (!isUserVerified || isUserAdmin) ? renderProducts() : ("")
+              )
+          {(isUserVerified && !isUserAdmin) ? renderUserProducts(): ("")}
         </div>
       </div>
     </div>
