@@ -5,6 +5,7 @@ import Register from "./components/Register";
 import MainPage from "./components/MainPage";
 import Product from "./components/Product";
 import VerifyUsers from "./components/Verify";
+import HistoryPurchases from "./components/HistoryPurchases";
 
 import {
     BrowserRouter as Router,
@@ -26,6 +27,7 @@ function App() {
                     <Route path="/MainPage" element={<MainPage/>} />
                     <Route path="/newProduct" element={<Product/>} />
                     <Route path="/verifyUsers" element = {<VerifyUsers/>} />
+                    <Route path="/HistoryPurchases" element = {<HistoryPurchases/>} />
                 </Routes>
             </Router>
         </>

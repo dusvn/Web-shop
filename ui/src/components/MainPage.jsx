@@ -20,6 +20,7 @@ export default function MainPage() {
   const [currencyValues, setCurrencyValues] = useState({});
   const [displayedPrices, setDisplayedPrices] = useState({});
 
+
   const [izValute, setIzValute] = useState('USD');
   const [uValutu, setUValutu] = useState('EUR');
   const [iznos, setIznos] = useState(0);
@@ -49,6 +50,7 @@ export default function MainPage() {
   const [passwordError, setPasswordError] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
+
 
   const handleNameChange = (e) => {
         const value = e.target.value;
@@ -237,6 +239,10 @@ export default function MainPage() {
 
   const handleVerify = () => {
     navigate('/verifyUsers');
+  };
+
+  const handlePurchases = () =>{
+    navigate('/HistoryPurchases');
   };
 
   const handleViewProducts = () => {
@@ -1066,7 +1072,7 @@ export default function MainPage() {
                 <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full" onClick={handleProfileEdit}>Edit profile</button>
                 <br />
                 <br />
-                <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Purchase history</button>
+                <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full" onClick={handlePurchases}>Purchase history</button>
                 <br />
                 <br />
                 <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Add funds</button>
