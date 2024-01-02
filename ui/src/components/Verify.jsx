@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../index';
 import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 const VerifyUsers = () => {
   const navigate = useNavigate();
@@ -89,10 +90,14 @@ const VerifyUsers = () => {
                 <td className="py-2 px-4 text-center">{userData.cardNum}</td>
               </tr>
             ))}
+          
           </tbody>
         </table>
       </div>
       <button className="bg-teal-500 text-white px-4 py-2 rounded mt-4" onClick={handleApprove}>Approve all</button>
+      <Link to="/MainPage" className='text-cyan-400 underline'>
+              Back to the main page
+            </Link>
     </div>
   );
 };

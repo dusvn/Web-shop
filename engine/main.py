@@ -1,4 +1,5 @@
 # from functools import wraps
+from collections import defaultdict
 
 from flask import Flask, jsonify, request, json
 from flask_cors import CORS
@@ -9,11 +10,15 @@ from Model.User import *
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt
 from Model.Product import *
 from Model.CreditCard import *
+from Model.Order import *
+from multiprocessing import Process
 
 import secrets
 import hashlib
 from google.cloud.firestore_v1.base_query import FieldFilter  # nije potrebno ali neka stoji jer moze da zatreba taj fieldFilter pri queryjovanju iz baze
 import requests
+import time
+import signal
 
 app = Flask(__name__)
 CORS(app, origins="*", methods=["GET", "POST", "PUT", "OPTIONS"])
@@ -293,6 +298,154 @@ def add_funds():
         doc_ref.set(new_map_field_data)
     return {"message": f"sucessfuly added funds"}, 200
 
+@app.route("/api/addNewOrder", methods=['POST'])
+@jwt_required()
+def add_new_order():
+    jwt_token = get_jwt().get("sub")
+    data = request.get_json()
+    data['buyerId'] = jwt_token
+    currency = data.get('currency')
+    price = float(data.get('price'))
+    newOrder = OrderSchema().load(data)
+    new_order_dict = OrderSchema().dump(newOrder)
+    bill = firestore.client().collection("Bill").document(jwt_token)
+    orders_collection = firestore.client().collection("Orders")
+
+    orders_collection.add(new_order_dict)
+
+    product_ref = firestore.client().collection("Products").document(data.get('productId'))
+    product_data = product_ref.get().to_dict()
+    current_quantity = product_data.get('quantity', 0)
+    if current_quantity > 0:
+        new_quantity = current_quantity - 1
+        product_ref.update({"quantity": new_quantity})
+
+    bill_data = bill.get().to_dict()
+
+    if currency in bill_data:
+        existing_value = bill_data[currency].get('value', 0.0)
+        new_value = existing_value - price
+        bill.update({f'{currency}.value': new_value})
+        return jsonify({'message': 'Order added successfully.'}), 200
+    else:
+        return jsonify({'error': 'Currency not found in bills.'}), 404
+
+
+
+@app.route("/api/getPurchasesForUser",methods=['GET'])
+@jwt_required()
+def findPurchases():
+    jwt_token = get_jwt().get("sub")
+    orders_query = (
+        db.collection("Orders")
+        .where("completed", "==", True)
+        .where("buyerId", "==", jwt_token)
+    )
+    orders_data = [
+        {
+            "currency": order.get("currency"),
+            "dateTime": order.get("dateTime"),
+            "price": order.get("price")
+        }
+        for order in orders_query.stream()
+    ]
+    if jwt_token not in admin_ids:
+        return jsonify({"orders": orders_data}), 200
+    else:
+        return {"message": "This function cannont be executet by regular user"}, 400
+
+@app.route("/api/getLivePurchases", methods=['GET'])
+@jwt_required()
+def livePurchases():
+    jwt_token = get_jwt().get("sub")
+
+    if jwt_token not in admin_ids:
+        return {"message": "This function cannot be executed by admin"}, 400
+
+    orders_query = (
+        db.collection("Orders")
+        .where("completed", "==", True)
+    )
+    orders_data = []
+
+    for order in orders_query.stream():
+        buyer_id = order.get("buyerId")
+        if buyer_id:
+            buyer_info = db.collection("Users").document(buyer_id).get().to_dict()
+
+            orders_data.append({
+                "currency": order.get("currency"),
+                "dateTime": order.get("dateTime"),
+                "price": order.get("price"),
+                "buyerId": buyer_id,
+                "name": buyer_info.get("name"),
+                "lastName": buyer_info.get("lastName"),
+                "email": buyer_info.get("email"),
+            })
+
+    return jsonify({"orders": orders_data}), 200
+
+
+
+def order_processing():
+    try:
+        while True:
+            orders_ref = db.collection("Orders")
+            incomplete_orders = orders_ref.where(filter=FieldFilter("completed", "==", False)).stream()
+
+            # Sve neizvrsene porudzbine grupisati po ID kupca
+            grouped_orders = defaultdict(list)
+            for order in incomplete_orders:
+                order_data = order.to_dict()
+                buyer_id = order_data.get("buyerId")
+                grouped_orders[buyer_id].append(order_data)
+                order_ref = orders_ref.document(order.id)
+                order_ref.update({"completed": True})
+
+            doc_ref = firestore.client().collection("Bill").document(admin_ids[0])
+            for buyer_id, orders in grouped_orders.items():
+                message = "Your order(s) have been completed:\n"
+                buyer_ref = firestore.client().collection("Users").document(buyer_id)
+                buyer_data = buyer_ref.get().to_dict()
+                buyer_email = buyer_data.get("email")
+                for order in orders:
+                    product_ref = firestore.client().collection("Products").document(order.get("productId"))
+                    product_data = product_ref.get().to_dict()
+                    order_time = order.get("dateTime")
+                    product_name = product_data.get("name")
+                    order_price = order.get("price")
+                    order_curr = order.get("currency")
+                    message += f"\n{order_time} Product: {product_name}, for: {order_price} {order_curr}"
+                    # Dodaj pare adminu
+
+                    existing_data = doc_ref.get().to_dict()
+
+                    if existing_data:
+                        if order_curr in existing_data:
+                            existing_value = existing_data[order_curr].get('value', 0.0)
+                            combined_value = existing_value + order_price
+                            doc_ref.update({f'{order_curr}.value': combined_value})
+                        else:
+                            new_map_field_data = {order_curr: {'value': order_price}}
+                            doc_ref.update(new_map_field_data)
+                    else:
+                        new_map_field_data = {order_curr: {'value': order_price}}
+                        doc_ref.set(new_map_field_data)
+
+                message += "\n\nThank you for shopping with us."
+                send_simple_message(buyer_email, "Order(s) update", message)
+
+            time.sleep(60)
+    except KeyboardInterrupt:
+        print("Order processing interrupted. Cleaning up...")
 
 if __name__ == "__main__":
+    order_process = Process(target=order_processing)
+    order_process.daemon = True
+    order_process.start()
+
     app.run()
+
+
+
+
