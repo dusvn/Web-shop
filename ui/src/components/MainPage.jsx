@@ -164,6 +164,7 @@ export default function MainPage() {
            fetchExchangeRate();
   }, [izValute, uValutu, currencyPairs]);
 
+  
   useEffect(() => {
     if (kurs !== null) {
       const convertedAmount = iznos * kurs;
@@ -244,6 +245,11 @@ export default function MainPage() {
   const handlePurchases = () =>{
     navigate('/HistoryPurchases');
   };
+
+  const handleLivePurchases = () =>{
+    navigate('/LivePurchases');
+  };
+  
 
   const handleViewProducts = () => {
     setShowQuantity(false);
@@ -1088,7 +1094,7 @@ export default function MainPage() {
                 <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full" onClick={handleAddQuantity}>Add quantity</button>
                 <br />
                 <br />
-                <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full">Purchases</button>
+                <button className="bg-teal-500 text-white px-4 py-2 rounded mb-4 w-full" onClick={handleLivePurchases}>Live Purchases</button>
                 <br />
                 <br />
               </>
